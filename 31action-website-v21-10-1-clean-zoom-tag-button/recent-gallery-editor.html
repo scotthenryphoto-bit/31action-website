@@ -1,0 +1,180 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recent Shoot Editor | 31 ACTION</title><link rel="stylesheet" href="assets/css/styles.css"></head>
+<body>
+<header class="site-header"><a class="brand" href="admin.html"><span class="brand-main"><span class="n">31</span><span class="a">ACTION</span></span><span class="brand-sub">RECENT SHOOT EDITOR</span></a><nav class="main-nav"><a href="visual-editor.html">Visual Editor</a><a href="admin.html">Admin</a></nav></header>
+<main class="gallery-editor-shell">
+<div class="kicker">Recent Shoot</div><h1 id="ge-title">Gallery Editor</h1>
+<p class="mini-note">Add a few extra photos directly here, remove individual photos, and choose/crop the cover used for Recent Events.</p>
+
+<section class="event-cover-editor">
+  <div class="event-cover-editor-head">
+    <div><div class="kicker">Recent Event Cover</div><h2>Choose & Crop Event Cover</h2>
+    <p class="mini-note">Pick a gallery photo below, then adjust Desktop and Phone framing separately.</p></div>
+    <div class="cover-device-tabs">
+      <button type="button" class="button active" data-cover-device="desktop">Desktop</button>
+      <button type="button" class="button" data-cover-device="mobile">Phone</button>
+    </div>
+  </div>
+  <div class="event-cover-workspace">
+    <div class="event-cover-preview" id="event-cover-preview"><div class="empty-state">Choose a cover photo below.</div></div>
+    <div class="event-cover-controls">
+      <label>Zoom<input id="cover-zoom" type="range" min="1" max="3" step=".01" value="1"><span id="cover-zoom-value">1.00×</span></label>
+      <label>Left / Right<input id="cover-x" type="range" min="0" max="100" step="1" value="50"></label>
+      <label>Up / Down<input id="cover-y" type="range" min="0" max="100" step="1" value="50"></label>
+      <button id="save-event-cover" class="primary-btn" type="button" disabled>Save Cover & Crops</button>
+      <div id="event-cover-status" class="mini-note">No cover selected.</div>
+    </div>
+  </div>
+</section>
+
+<section class="v15-ge-upload">
+  <label>Watermark<select id="ge-watermark"><option value="standard">Standard</option><option value="light">Light</option><option value="strong">Strong</option><option value="none">None</option></select></label>
+  <div class="v15-drop" id="ge-drop"><input id="ge-files" type="file" accept="image/jpeg,image/png,image/webp" multiple><strong>Drag additional photos here</strong><span>or click to select files</span></div>
+  <div id="ge-upload-status" class="mini-note">Ready.</div>
+</section>
+
+<div id="ge-status" class="mini-note"></div><div id="ge-grid" class="gallery-editor-grid"></div>
+</main>
+<script src="assets/js/api-config.js"></script><script src="assets/js/portfolio-api.js"></script>
+<script>
+const id=new URLSearchParams(location.search).get('id'),token=()=>sessionStorage.getItem('31action_admin_token')||'';
+if(!token())location.replace('admin-gate.html');
+async function req(path,opt={}){opt.headers=Object.assign({},opt.headers||{},{Authorization:`Bearer ${token()}`});return ActionAPI.request(path,opt)}
+const esc=v=>String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let photoCount=0, galleryPhotos=[], coverPhotoId=null, coverDevice='desktop';
+let coverCrops={desktop:null,mobile:null};
+
+function cropFromControls(){
+  const z=Math.max(1,Number(document.getElementById('cover-zoom').value)||1);
+  const w=100/z,h=100/z;
+  const cx=Number(document.getElementById('cover-x').value)||50;
+  const cy=Number(document.getElementById('cover-y').value)||50;
+  return {
+    x:Math.max(0,Math.min(100-w,cx-w/2)),
+    y:Math.max(0,Math.min(100-h,cy-h/2)),
+    w,h,excluded:false
+  };
+}
+function controlsFromCrop(crop){
+  const c=crop||{x:0,y:0,w:100,h:100};
+  const z=100/Math.max(1,Number(c.w)||100);
+  document.getElementById('cover-zoom').value=Math.max(1,Math.min(3,z));
+  document.getElementById('cover-zoom-value').textContent=Number(document.getElementById('cover-zoom').value).toFixed(2)+'×';
+  document.getElementById('cover-x').value=Math.round((Number(c.x)||0)+(Number(c.w)||100)/2);
+  document.getElementById('cover-y').value=Math.round((Number(c.y)||0)+(Number(c.h)||100)/2);
+}
+function selectedCoverPhoto(){return galleryPhotos.find(p=>String(p.id)===String(coverPhotoId))}
+function renderCoverPreview(){
+  const host=document.getElementById('event-cover-preview');
+  const photo=selectedCoverPhoto();
+  if(!photo){host.innerHTML='<div class="empty-state">Choose a cover photo below.</div>';return}
+  coverCrops[coverDevice]=cropFromControls();
+  host.classList.toggle('phone',coverDevice==='mobile');
+  host.innerHTML=`<img id="event-cover-preview-img" src="${ActionAPI.base()+photo.preview_url}" alt="">`;
+  const img=document.getElementById('event-cover-preview-img');
+  ActionPortfolio.renderCropInto(
+    img,
+    {src:ActionAPI.base()+photo.preview_url},
+    coverCrops[coverDevice],
+    true
+  ).catch(()=>{});
+}
+function chooseCover(photoId){
+  if(coverPhotoId && selectedCoverPhoto())coverCrops[coverDevice]=cropFromControls();
+  coverPhotoId=photoId;
+  document.querySelectorAll('.gallery-editor-photo').forEach(c=>c.classList.toggle('cover-selected',String(c.dataset.id)===String(photoId)));
+  controlsFromCrop(coverCrops[coverDevice]);
+  document.getElementById('save-event-cover').disabled=false;
+  document.getElementById('event-cover-status').textContent='Cover selected. Adjust Desktop and Phone framing, then save.';
+  renderCoverPreview();
+}
+async function load(){
+ try{
+  const d=await req(`/api/admin/galleries/${encodeURIComponent(id)}/photos`);
+  document.getElementById('ge-title').textContent=d.gallery.title;
+  photoCount=(d.photos||[]).length;
+  galleryPhotos=d.photos||[];
+  coverPhotoId=d.gallery.cover_photo_id||coverPhotoId||galleryPhotos[0]?.id||null;
+  coverCrops.desktop=d.gallery.cover_crop_desktop||coverCrops.desktop||{x:0,y:0,w:100,h:100,excluded:false};
+  coverCrops.mobile=d.gallery.cover_crop_mobile||coverCrops.mobile||{x:0,y:0,w:100,h:100,excluded:false};
+
+  document.getElementById('ge-grid').innerHTML=galleryPhotos.map(p=>`<article class="gallery-editor-photo ${String(p.id)===String(coverPhotoId)?'cover-selected':''}" data-id="${esc(p.id)}"><img src="${ActionAPI.base()+p.preview_url}"><div><strong>${esc(p.filename)}</strong><button class="button choose-cover" type="button">Use as Event Cover</button><label><input class="remove-check" type="checkbox"> Confirm remove</label><button class="button danger remove-photo">Remove Photo</button></div></article>`).join('')||'<div class="empty-state">No photos remain in this gallery.</div>';
+  controlsFromCrop(coverCrops[coverDevice]);
+  document.getElementById('save-event-cover').disabled=!coverPhotoId;
+  renderCoverPreview();
+  bind();
+ }catch(e){document.getElementById('ge-status').textContent=e.message}
+}
+function bind(){
+ document.querySelectorAll('.choose-cover').forEach(btn=>btn.onclick=()=>chooseCover(btn.closest('.gallery-editor-photo').dataset.id));
+ document.querySelectorAll('.remove-photo').forEach(btn=>btn.onclick=async()=>{
+   const card=btn.closest('.gallery-editor-photo');
+   if(!card.querySelector('.remove-check').checked)return alert('Check Confirm remove first.');
+   if(!confirm('Remove this photo from the gallery and online storage?'))return;
+   try{await req(`/api/admin/photos/${encodeURIComponent(card.dataset.id)}`,{method:'DELETE'});await load()}catch(e){alert(e.message)}
+ });
+}
+function safeName(n){return String(n||'image.jpg').replace(/[^\w.\- ]+/g,'_')}
+async function bitmap(file){if('createImageBitmap'in window)return createImageBitmap(file);return new Promise((resolve,reject)=>{const im=new Image(),u=URL.createObjectURL(file);im.onload=()=>{URL.revokeObjectURL(u);resolve(im)};im.onerror=reject;im.src=u})}
+async function preview(file,mode){
+ const img=await bitmap(file),max=1800,sc=Math.min(1,max/Math.max(img.width,img.height)),w=Math.round(img.width*sc),h=Math.round(img.height*sc),c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.drawImage(img,0,0,w,h);if(img.close)img.close();
+ function stamp(text,x,y,size,a,ang=0){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${size}px Arial`;ctx.lineWidth=Math.max(1.5,size*.045);ctx.strokeStyle=`rgba(0,0,0,${Math.min(.45,a+.1)})`;ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.strokeText(text,0,0);ctx.fillText(text,0,0);ctx.restore()}
+ if(mode==='light'){const s=Math.max(22,Math.round(Math.min(w,h)*.045));stamp('31 ACTION',w*.18,h*.1,s,.26);stamp('PREVIEW',w*.82,h*.9,s*.72,.24)}
+ else if(mode==='standard'){const s=Math.max(34,Math.round(Math.min(w,h)*.072));stamp('31 ACTION · PREVIEW',w*.5,h*.47,s,.25,-Math.PI/18);stamp('31 ACTION',w*.82,h*.91,Math.max(20,s*.42),.22)}
+ else if(mode==='strong'){const s=Math.max(26,Math.round(Math.min(w,h)*.048));for(let r=0;r<4;r++)for(let col=0;col<3;col++){const x=(col+.5)*w/3+(r%2?w/6:0);if(x>w*.97)continue;stamp('31 ACTION · PREVIEW',x,(r+.55)*h/4,s,.2,-Math.PI/8)}}
+ const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.86));return{blob,width:w,height:h}
+}
+async function upload(files){
+ const list=[...files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name)),status=document.getElementById('ge-upload-status'),mode=document.getElementById('ge-watermark').value;if(!list.length)return;
+ try{
+  for(let i=0;i<list.length;i++){
+   const f=list[i],name=safeName(f.name);status.textContent=`Uploading ${i+1} of ${list.length}: ${f.name}`;
+   const original=await req(`/api/admin/galleries/${encodeURIComponent(id)}/original/${encodeURIComponent(name)}`,{method:'PUT',headers:{'Content-Type':f.type||'image/jpeg'},body:f});
+   const pv=await preview(f,mode),previewName=name.replace(/\.(png|webp)$/i,'.jpg');
+   const pr=await req(`/api/admin/galleries/${encodeURIComponent(id)}/preview/${encodeURIComponent(previewName)}`,{method:'PUT',headers:{'Content-Type':'image/jpeg'},body:pv.blob});
+   await req('/api/admin/photos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gallery_id:id,filename:f.name,original_key:original.key,preview_key:pr.key,width:pv.width,height:pv.height,sort_order:photoCount+i})});
+  }
+  status.textContent=`${list.length} photo${list.length===1?'':'s'} added.`;await load()
+ }catch(e){status.textContent='Upload stopped: '+e.message}
+}
+
+document.querySelectorAll('[data-cover-device]').forEach(btn=>btn.onclick=()=>{
+  if(coverPhotoId)coverCrops[coverDevice]=cropFromControls();
+  coverDevice=btn.dataset.coverDevice;
+  document.querySelectorAll('[data-cover-device]').forEach(x=>x.classList.toggle('active',x===btn));
+  controlsFromCrop(coverCrops[coverDevice]);
+  renderCoverPreview();
+});
+['cover-zoom','cover-x','cover-y'].forEach(id2=>{
+  document.getElementById(id2).addEventListener('input',()=>{
+    document.getElementById('cover-zoom-value').textContent=Number(document.getElementById('cover-zoom').value).toFixed(2)+'×';
+    renderCoverPreview();
+  });
+});
+document.getElementById('save-event-cover').onclick=async()=>{
+  if(!coverPhotoId)return;
+  coverCrops[coverDevice]=cropFromControls();
+  const status=document.getElementById('event-cover-status');
+  status.textContent='Saving cover and crops…';
+  try{
+    await req(`/api/admin/galleries/${encodeURIComponent(id)}/cover`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        cover_photo_id:coverPhotoId,
+        cover_crop_desktop:coverCrops.desktop,
+        cover_crop_mobile:coverCrops.mobile
+      })
+    });
+    status.textContent='Saved. Recent Events will use this cover and these Desktop/Phone crops.';
+  }catch(e){status.textContent='Save failed: '+e.message}
+};
+
+const drop=document.getElementById('ge-drop'),inp=document.getElementById('ge-files');
+drop.onclick=e=>{if(e.target!==inp)inp.click()};inp.onchange=()=>upload(inp.files);
+['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('drag')}));
+['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('drag')}));
+drop.addEventListener('drop',e=>upload(e.dataTransfer.files));
+load();
+</script></body></html>

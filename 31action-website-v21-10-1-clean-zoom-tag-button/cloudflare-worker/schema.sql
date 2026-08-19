@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS galleries (id TEXT PRIMARY KEY, title TEXT NOT NULL, shoot_date TEXT, status TEXT DEFAULT 'draft', created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS photos (id TEXT PRIMARY KEY, gallery_id TEXT NOT NULL, filename TEXT NOT NULL, original_key TEXT NOT NULL, preview_key TEXT, sort_order INTEGER DEFAULT 0, FOREIGN KEY(gallery_id) REFERENCES galleries(id));
+CREATE TABLE IF NOT EXISTS access_grants (id TEXT PRIMARY KEY, email TEXT NOT NULL, gallery_id TEXT NOT NULL, access_type TEXT NOT NULL DEFAULT 'full_digital', expires_at TEXT, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, email TEXT NOT NULL, stripe_session_id TEXT, status TEXT NOT NULL, total_cents INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, order_id TEXT NOT NULL, photo_id TEXT NOT NULL, product_id TEXT NOT NULL, quantity INTEGER NOT NULL DEFAULT 1, unit_cents INTEGER NOT NULL, FOREIGN KEY(order_id) REFERENCES orders(id));

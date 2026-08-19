@@ -1,0 +1,817 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recent Event | 31 ACTION</title><link rel="stylesheet" href="assets/css/styles.css"></head><body><header class="site-header"><a class="brand" href="index.html"><span class="brand-main"><span class="n">31</span><span class="a">ACTION</span></span><span class="brand-sub">PHOTOGRAPHY BY SCOTT HENRY</span></a><button class="menu-btn">MENU</button><nav class="main-nav"><a href="index.html">Home</a><a href="work.html">Portfolio</a><a href="reels.html">Reels</a><a class="active" href="recent-shoots.html">Recent Events</a><a href="about.html">About</a><a href="contact.html">Contact</a><a class="player-link" href="player.html">Player / Client Login</a><a class="cart-link" href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a class="instagram instagram-link" href="https://www.instagram.com/northcountyunofficial/" target="_blank" rel="noopener" aria-label="Instagram">
+<svg class="instagram-icon" viewBox="0 0 24 24" aria-hidden="true">
+<rect x="3" y="3" width="18" height="18" rx="5" ry="5"></rect>
+<circle cx="12" cy="12" r="4.2"></circle>
+<circle cx="17.4" cy="6.7" r="1.05" class="ig-dot"></circle>
+</svg>
+<span>Instagram</span></a></nav></header><main class="shoots-wrap"><a href="recent-shoots.html" class="kicker">← Recent Events</a><h1 id="shoot-title" class="big-title" style="margin-top:14px">Loading Gallery…</h1><div class="package-banner v21-1-package-banner redesigned-package-banner">
+  <div class="package-banner-copy">
+    <div class="package-banner-head">SAVE WITH DIGITAL PACKAGES</div>
+    <div class="package-deals">
+      <b>1 DIGITAL <em>$10</em></b>
+      <b>ANY 3 <em>$25</em></b>
+      <b>ALL PHOTOS OF ONE PLAYER <em>$35</em></b>
+    </div>
+    <span>Any 3 pricing is applied automatically in your cart. The $35 player package is per player, per event and excludes team/group photos.</span>
+  </div>
+  <div class="package-login-side">
+    <div id="shoot-my-events" hidden></div>
+    <a class="primary-btn v21-3-login-btn compact-login-btn" href="player.html">Player / Client Login</a>
+  </div>
+</div><div id="shoot-tabs" class="shoot-tabs event-folder-rail"></div>
+<section id="tag-player-panel" class="v21-tag-player-panel">
+  <div class="v21-tag-player-head">
+    <div>
+      <div class="kicker"><span id="tag-mode-indicator">HELP IDENTIFY PLAYERS</span></div>
+      <h2>Tag a Player</h2>
+      <div class="tag-multiple-note">Tag multiple photos at once.</div>
+    </div>
+    <button id="tag-player-start" class="primary-btn" type="button">Tag a Player</button>
+  </div>
+  <div id="tag-player-workflow" class="v21-tag-workflow" hidden>
+    <div class="v21-1-tag-steps tag-workflow-steps">
+      <b>1. Enter or choose the player.</b>
+      <b>2. Click each photo that contains that player.</b>
+      <b>3. Submit once when all matching photos are selected.</b>
+      <span>More than one player can be tagged on the same photo. Pending tags remain visible as Unverified until approved.</span>
+    </div>
+    <div class="v21-1-active-banner">TAGGING MODE ACTIVE — PHOTO ENLARGEMENT IS OFF. CLICK EACH MATCHING PHOTO TO SELECT IT.</div>
+    <div class="v21-tag-search-wrap">
+      <label>Find Player<input id="tag-player-search" type="search" autocomplete="off" placeholder="Name, #17, school, team..."></label>
+      <div id="tag-player-suggestions" class="v21-tag-suggestions" hidden></div>
+    </div>
+    <div id="tag-player-selected" class="v21-tag-selected mini-note">Choose a player first. Then click every matching photo below.</div>
+    <div class="v21-unlisted-row">
+      <button id="tag-player-unlisted" class="button" type="button">Use Unlisted Player</button>
+      <button id="tag-player-cancel" class="button" type="button">Done Tagging</button>
+    </div>
+    <div id="tag-photo-count" class="v21-tag-count">0 photos selected</div>
+    <button id="tag-player-submit" class="primary-btn" type="button" disabled>Submit Tag for Selected Photos</button>
+    <div id="tag-player-status" class="mini-note"></div>
+  </div>
+</section>
+<section id="gallery-search-nav" class="v21-4-search-nav" hidden>
+  <div class="v21-4-search-top">
+    <div class="v21-4-search-field">
+      <label for="gallery-search-input">Search this gallery</label>
+      <input id="gallery-search-input" type="search" placeholder="Player, #, school, team, tag...">
+    </div>
+    <button id="gallery-search-run" class="primary-btn" type="button">Search</button>
+    <button id="gallery-search-clear" class="button" type="button">Clear Search</button>
+  </div>
+  <div class="v21-4-search-summary">
+    <div class="v21-4-result-number" id="gallery-search-big-position">—</div>
+    <div class="v21-4-result-copy">
+      <strong id="gallery-search-query"></strong>
+      <span id="gallery-search-count"></span>
+      <div id="gallery-search-terms" class="gallery-search-terms" hidden></div>
+      <span id="gallery-search-position"></span>
+      <span id="gallery-search-distance"></span>
+    </div>
+    <div class="v21-4-search-actions">
+      <button id="gallery-search-prev" class="button" type="button">↑ Previous Match</button>
+      <button id="gallery-search-next" class="button" type="button">↓ Next Match</button>
+    </div>
+  </div>
+</section>
+<div id="sales-grid" class="sales-grid"></div>
+<section id="fan-favorites-section" class="fan-favorites-section" hidden>
+  <div class="fan-favorites-head">
+    <div><div class="kicker">Event Ratings</div><h2>Fan Favorites</h2>
+    <p>Star ratings are public event ratings. They are separate from your private Favorites.</p></div>
+  </div>
+  <div id="fan-favorites-grid" class="fan-favorites-grid"></div>
+</section>
+</main><footer class="site-footer"><a class="footer-brand" href="index.html"><span class="n">31</span><span class="a">ACTION</span></a><nav class="footer-nav"><a href="index.html">Home</a><a href="work.html">Portfolio</a><a href="reels.html">Reels</a><a href="recent-shoots.html">Recent Events</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="player.html">Player / Client Login</a><a href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a href="admin-gate.html" style="color:#555">Admin</a></nav></footer><script src="assets/js/images.js"></script><script src="assets/js/crops.js"></script><script src="assets/js/store-config.js"></script><script src="assets/js/api-config.js"></script><script src="assets/js/site.js"></script><script>
+const id=new URLSearchParams(location.search).get('id'),grid=document.getElementById('sales-grid'),tabs=document.getElementById('shoot-tabs');let shoot=null;
+function money(v){return new Intl.NumberFormat('en-US',{style:'currency',currency:STORE_CONFIG.currency}).format(v)}
+function esc(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function cartSummaryFor(src){const items=Cart.forPhoto(shoot.id,src);return items.length?`<strong>In your cart</strong>${items.map(x=>`<div class="in-cart-line"><span>${esc(x.productLabel)}</span><span>×${x.quantity}</span></div>`).join('')}`:''}
+function updateCardStates(){if(!shoot)return;grid.querySelectorAll('.sale-item').forEach((el,i)=>{const src=shoot.photos[i],items=Cart.forPhoto(shoot.id,src),sum=el.querySelector('.in-cart-summary'),btn=el.querySelector('.buy-btn');el.classList.toggle('in-cart',items.length>0);sum.innerHTML=cartSummaryFor(src);btn.textContent=items.length?'Add Another':'Add to Cart'})}
+function draw(){document.getElementById('shoot-title').textContent=shoot.title;document.title=shoot.title+' | 31 ACTION';grid.innerHTML=shoot.photos.map((src,i)=>`<article class="sale-item" data-shoot-id="${esc(shoot.id)}" data-shoot-title="${esc(shoot.title)}" data-photo-path="${esc(src)}" data-photo-index="${i+1}" data-photo-id="${esc(shoot.photoIds?.[i]||'')}" data-filename="${esc(shoot.filenames?.[i]||src.split('/').pop())}"><div class="sale-photo"><span class="cart-photo-badge">Added to Cart</span><img loading="lazy" src="${esc(src)}" alt="${esc(shoot.title)} photo ${i+1}"></div><div class="sale-copy"><div class="file-id">Photo ${i+1} · ${esc(shoot.filenames?.[i]||src.split('/').pop())}</div><div class="photo-player-tags-display" aria-label="Player tags"></div><div class="product-row"><select class="product-select">${STORE_CONFIG.products.map(p=>`<option value="${p.id}">${esc(p.label)} — ${money(p.price)}</option>`).join('')}</select><input class="qty" type="number" min="1" value="1" aria-label="Quantity"></div><button class="buy-btn">Add to Cart</button><div class="in-cart-summary"></div><div class="photo-player-actions"></div></div></article>`).join('');grid.querySelectorAll('.sale-item').forEach((el,i)=>el.querySelector('.buy-btn').onclick=()=>{const p=STORE_CONFIG.products.find(p=>p.id===el.querySelector('.product-select').value);Cart.add({shootId:shoot.id,shootTitle:shoot.title,photoIndex:i+1,photoPath:shoot.photos[i],filename:shoot.filenames?.[i]||shoot.photos[i].split('/').pop(),productId:p.id,productLabel:p.label,price:p.price,requiresShipping:p.requiresShipping,quantity:Math.max(1,Number(el.querySelector('.qty').value)||1)});updateCardStates()});updateCardStates();window.addEventListener('cart:changed',updateCardStates);if(typeof wireTagCards==='function')wireTagCards();if(typeof refreshShootPlayer==='function')setTimeout(refreshShootPlayer,0);if(typeof loadPhotoPlayerTags==='function')setTimeout(loadPhotoPlayerTags,0);setTimeout(initGallerySearch,0)}
+async function load(){try{const [galls,g]=await Promise.all([ActionAPI.galleries(),ActionAPI.gallery(id)]);tabs.innerHTML=(galls.galleries||[]).map(s=>`<a class="${s.id===id?'active':''}" href="shoot.html?id=${encodeURIComponent(s.id)}">${esc(s.title)}</a>`).join('');shoot={id:g.gallery.id,title:g.gallery.title,photos:(g.photos||[]).map(p=>ActionAPI.base()+p.preview_url),filenames:(g.photos||[]).map(p=>p.filename),photoIds:(g.photos||[]).map(p=>p.id)};draw();return}catch(e){console.error('API gallery load failed',e)}
+const local=(window.SITE_SHOOTS||[]),s=local.find(x=>x.id===id);tabs.innerHTML=local.map(x=>`<a class="${x.id===id?'active':''}" href="shoot.html?id=${encodeURIComponent(x.id)}">${esc(x.title)}</a>`).join('');if(!s){document.getElementById('shoot-title').textContent='Shoot not found';grid.innerHTML='<div class="empty-state">Return to Recent Shoots and choose a gallery.</div>';return}shoot={...s,filenames:(s.photos||[]).map(p=>p.split('/').pop())};draw()}
+
+let tagMode=false,tagSelectedPlayer=null,tagSelectedPhotos=new Set(),tagSuggestTimer=null;
+
+function updateTagSelectionUI(){
+  const count=tagSelectedPhotos.size;
+  document.getElementById('tag-photo-count').textContent=`${count} photo${count===1?'':'s'} selected`;
+  document.getElementById('tag-player-submit').disabled=!tagSelectedPlayer||!count;
+}
+function startTagPlayer(){
+  tagMode=true;tagSelectedPlayer=null;tagSelectedPhotos.clear();
+  document.getElementById('tag-player-workflow').hidden=false;
+  document.getElementById('tag-player-start').hidden=true;
+  document.getElementById('tag-player-search').value='';
+  document.getElementById('tag-player-selected').textContent='Choose a player from the suggestions, or submit an unlisted player.';
+  document.body.classList.add('player-tag-mode');
+  document.getElementById('tag-player-panel')?.classList.add('tagging-active');
+  const indicator=document.getElementById('tag-mode-indicator');if(indicator)indicator.textContent='TAGGING MODE ACTIVE';
+  const status=document.getElementById('tag-player-status');if(status)status.textContent='Choose a player, then click every photo that contains that player.';
+  updateTagSelectionUI();
+  document.getElementById('tag-player-search').focus();
+}
+function cancelTagPlayer(){
+  tagMode=false;tagSelectedPlayer=null;tagSelectedPhotos.clear();
+  document.getElementById('tag-player-workflow').hidden=true;
+  document.getElementById('tag-player-start').hidden=false;
+  document.getElementById('tag-player-suggestions').hidden=true;
+  document.body.classList.remove('player-tag-mode');
+  document.getElementById('tag-player-panel')?.classList.remove('tagging-active');
+  const indicator=document.getElementById('tag-mode-indicator');if(indicator)indicator.textContent='HELP IDENTIFY PLAYERS';
+  document.querySelectorAll('.sale-item.tag-selected').forEach(x=>x.classList.remove('tag-selected'));
+}
+function selectTagPlayer(p){
+  tagSelectedPlayer=p;
+  document.getElementById('tag-player-suggestions').hidden=true;
+  document.getElementById('tag-player-search').value=p.display_name||'';
+  const bits=[p.school,p.sport,p.team,p.jersey_number?`#${p.jersey_number}`:''].filter(Boolean);
+  document.getElementById('tag-player-selected').innerHTML=`Selected: <strong>${esc(p.display_name)}</strong>${bits.length?' · '+esc(bits.join(' · ')):''}${p.current_gallery_roster?' · Current gallery roster':''}`;
+  updateTagSelectionUI();
+}
+function useUnlistedPlayer(nameOverride){
+  const name=(nameOverride||document.getElementById('tag-player-search').value).trim();
+  if(name.length<2)return alert('Enter the player name first.');
+  tagSelectedPlayer={display_name:name,id:null};
+  document.getElementById('tag-player-suggestions').hidden=true;
+  document.getElementById('tag-player-selected').innerHTML=`Selected: <strong>${esc(name)}</strong> · Unlisted · Unverified`;
+  updateTagSelectionUI();
+}
+async function searchRosterSuggestions(){
+  const q=document.getElementById('tag-player-search').value.trim();
+  const box=document.getElementById('tag-player-suggestions');
+  if(!q){box.hidden=true;box.innerHTML='';return}
+  try{
+    const d=await ActionAPI.request('/api/roster-player-suggestions?'+new URLSearchParams({q,gallery_id:shoot?.id||id}).toString());
+    const rows=d.suggestions||[];
+    box.innerHTML=rows.map((p,i)=>`
+      <button class="v21-tag-suggestion" type="button" data-index="${i}">
+        <strong>${esc(p.display_name)}</strong>
+        <span>${esc([p.school,p.sport,p.team,p.jersey_number?`#${p.jersey_number}`:''].filter(Boolean).join(' · '))}</span>
+        <small>${p.current_gallery_roster?'Current gallery roster':(p.source==='athlete'?'Existing verified player':'Other roster')}</small>
+      </button>`).join('')+
+      `<button class="v21-tag-suggestion unlisted" type="button" data-unlisted="1"><strong>Use “${esc(q)}” as an unlisted player</strong><span>Possible match until approved.</span></button>`;
+    box.hidden=false;
+    box.querySelectorAll('[data-index]').forEach(b=>b.onclick=()=>selectTagPlayer(rows[Number(b.dataset.index)]));
+    box.querySelector('[data-unlisted]')?.addEventListener('click',()=>useUnlistedPlayer(q));
+  }catch(e){box.hidden=true}
+}
+function wireTagCards(){
+  document.querySelectorAll('.sale-item').forEach(card=>{
+    if(card.dataset.tagWired==='1')return;
+    card.dataset.tagWired='1';
+    card.addEventListener('click',e=>{
+      if(!tagMode)return;
+      if(e.target.closest('button,select,input,a,.photo-rating-ui,.photo-player-actions,.photo-player-tags-display'))return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const pid=card.dataset.photoId;
+      if(!pid){
+        const status=document.getElementById('tag-player-status');
+        if(status)status.textContent='This photo could not be selected because its photo ID was not loaded. Refresh the gallery and try again.';
+        return;
+      }
+      if(tagSelectedPhotos.has(pid)){tagSelectedPhotos.delete(pid);card.classList.remove('tag-selected')}
+      else{tagSelectedPhotos.add(pid);card.classList.add('tag-selected')}
+      updateTagSelectionUI();
+    },true);
+  });
+}
+async function submitTagPlayer(){
+  if(!tagSelectedPlayer||!tagSelectedPhotos.size)return;
+
+  const btn=document.getElementById('tag-player-submit');
+  const status=document.getElementById('tag-player-status');
+  const photoIds=[...tagSelectedPhotos];
+  const submittedPlayer={...tagSelectedPlayer};
+
+  btn.disabled=true;
+  btn.textContent='Submitting…';
+  if(status){
+    status.textContent=`Submitting ${photoIds.length} photo${photoIds.length===1?'':'s'} for ${submittedPlayer.display_name}…`;
+  }
+
+  try{
+    const d=await ActionAPI.request(`/api/galleries/${encodeURIComponent(shoot.id)}/player-tags`,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=UTF-8'},
+      body:JSON.stringify({
+        photo_ids:photoIds,
+        roster_player_id:submittedPlayer.id||null,
+        athlete_id:submittedPlayer.athlete_id||null,
+        player_name:submittedPlayer.display_name||'',
+        jersey_number:submittedPlayer.jersey_number||null
+      })
+    });
+
+    const saved=Number(d.saved_count)||0;
+    const already=Number(d.already_tagged_count)||0;
+
+    // Immediately show the pending label under every selected photo.
+    for(const photoId of photoIds){
+      const card=document.querySelector(`.sale-item[data-photo-id="${CSS.escape(String(photoId))}"]`);
+      if(!card)continue;
+
+      const box=card.querySelector('.photo-player-tags-display');
+      if(!box)continue;
+
+      let list=box.querySelector('.photo-player-tag-list');
+      if(!list){
+        box.innerHTML=`<div class="photo-player-tags-title">PLAYER TAGS</div><div class="photo-player-tag-list"></div>`;
+        list=box.querySelector('.photo-player-tag-list');
+      }
+
+      const playerName=submittedPlayer.display_name||'Player';
+      const alreadyShown=[...list.querySelectorAll('.photo-player-tag strong')]
+        .some(el=>el.textContent.replace(/\s+—\s+Unverified$/,'').trim().toLowerCase()===playerName.trim().toLowerCase());
+
+      if(!alreadyShown){
+        const tag=document.createElement('div');
+        tag.className='photo-player-tag pending';
+
+        const details=[
+          submittedPlayer.school,
+          submittedPlayer.sport,
+          submittedPlayer.team,
+          submittedPlayer.jersey_number?`#${submittedPlayer.jersey_number}`:''
+        ].filter(Boolean).join(' · ');
+
+        tag.innerHTML=`<strong>${esc(playerName)} — Unverified</strong>${details?`<span>${esc(details)}</span>`:''}`;
+        list.appendChild(tag);
+      }
+    }
+
+    // Success means tagging mode ends.
+    cancelTagPlayer();
+    document.getElementById('tag-player-panel')?.classList.remove('tagging-active');
+    document.body.classList.remove('player-tag-mode');
+
+    const indicator=document.getElementById('tag-mode-indicator');
+    if(indicator)indicator.textContent='HELP IDENTIFY PLAYERS';
+
+    const panel=document.getElementById('tag-player-panel');
+    const note=document.getElementById('tag-submit-confirmation')||document.createElement('div');
+    note.id='tag-submit-confirmation';
+    note.className='v21-2-tag-confirmation';
+
+    if(saved){
+      note.textContent=`✓ ${submittedPlayer.display_name} tagged on ${saved} photo${saved===1?'':'s'}${already?` · ${already} already tagged`:''}.`;
+    }else if(already){
+      note.textContent=`✓ ${submittedPlayer.display_name} was already tagged on the selected photo${already===1?'':'s'}.`;
+    }else{
+      note.textContent=`✓ ${submittedPlayer.display_name} submitted.`;
+    }
+
+    panel?.appendChild(note);
+    setTimeout(()=>note.remove(),6000);
+
+    // Replace optimistic labels with the API's authoritative state.
+    setTimeout(loadPhotoPlayerTags,250);
+
+  }catch(e){
+    console.error('Batch player tag failed',e);
+
+    // Keep tagging mode open so selections are not lost.
+    btn.disabled=false;
+    btn.textContent='Submit Tag for Selected Photos';
+
+    const message=String(e?.message||e||'Player tags could not be saved.');
+    if(status){
+      status.textContent=message==='Failed to fetch'
+        ?'Tagging could not reach the API. Refresh once and try again.'
+        :`Tagging failed: ${message}`;
+    }
+  }
+}
+
+window.startTagPlayer=startTagPlayer;
+window.updateTagSelectionUI=updateTagSelectionUI;
+Object.defineProperty(window,'tagSelectedPhotos',{
+  configurable:true,
+  get(){return tagSelectedPhotos}
+});
+
+document.getElementById('tag-player-start').onclick=startTagPlayer;
+document.getElementById('tag-player-cancel').onclick=cancelTagPlayer;
+document.getElementById('tag-player-unlisted').onclick=()=>useUnlistedPlayer();
+document.getElementById('tag-player-submit').onclick=submitTagPlayer;
+document.getElementById('tag-player-search').addEventListener('input',()=>{clearTimeout(tagSuggestTimer);tagSuggestTimer=setTimeout(searchRosterSuggestions,220)});
+document.getElementById('tag-player-search').addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('tag-player-suggestions').hidden=true});
+
+
+
+let publicPlayerTagsByPhoto=new Map();
+
+function renderPublicPlayerTags(){
+  document.querySelectorAll('.sale-item[data-photo-id]').forEach(card=>{
+    const box=card.querySelector('.photo-player-tags-display');
+    if(!box)return;
+    const rows=publicPlayerTagsByPhoto.get(String(card.dataset.photoId))||[];
+
+    if(!rows.length){
+      box.innerHTML='';
+      box.hidden=true;
+      return;
+    }
+
+    box.hidden=false;
+    box.innerHTML=`
+      <div class="photo-player-tags-title">PLAYER TAGS</div>
+      <div class="photo-player-tag-list">
+        ${rows.map(t=>{
+          const pending=t.status!=='verified';
+          const name=String(t.player_name||'Player');
+          const details=[
+            t.jersey_number?`#${t.jersey_number}`:'',
+            t.school||'',
+            t.team||'',
+            t.sport||''
+          ].filter(Boolean).join(' · ');
+          return `<div class="photo-player-tag ${pending?'pending':'verified'}">
+            <strong>${esc(name)}${pending?' — Unverified':''}</strong>
+            ${details?`<span>${esc(details)}</span>`:''}
+          </div>`;
+        }).join('')}
+      </div>`;
+  });
+}
+
+async function loadPhotoPlayerTags(){
+  if(!shoot?.id)return;
+  try{
+    const d=await ActionAPI.request(`/api/galleries/${encodeURIComponent(shoot.id)}/player-tags`);
+    const grouped=new Map();
+
+    for(const row of (d.tags||[])){
+      const pid=String(row.photo_id||'');
+      if(!pid)continue;
+      if(!grouped.has(pid))grouped.set(pid,[]);
+
+      // De-duplicate the same player/status if returned through two identity sources.
+      const arr=grouped.get(pid);
+      const key=[
+        String(row.player_name||'').trim().toLowerCase(),
+        String(row.jersey_number||'').trim().toLowerCase(),
+        row.status==='verified'?'verified':'pending'
+      ].join('|');
+      if(arr.some(x=>x._publicKey===key))continue;
+      arr.push({...row,_publicKey:key});
+    }
+
+    publicPlayerTagsByPhoto=grouped;
+    renderPublicPlayerTags();
+
+    // Refresh an open zoom panel too.
+    if(window.refreshLightboxPlayerTags)window.refreshLightboxPlayerTags();
+  }catch(e){
+    console.warn('Public player tags unavailable',e);
+  }
+}
+
+window.loadPhotoPlayerTags=loadPhotoPlayerTags;
+
+let gallerySearchState={
+  query:'',
+  matchIds:[],
+  matches:new Map(),
+  activeIndex:-1,
+  observer:null
+};
+
+function galleryCards(){
+  return [...document.querySelectorAll('.sale-item[data-photo-id]')];
+}
+function clearGallerySearchVisuals(){
+  galleryCards().forEach(card=>{
+    card.classList.remove('search-match','search-dim','search-current');
+    card.removeAttribute('data-search-reasons');
+  });
+}
+function searchMatchCards(){
+  const set=new Set(gallerySearchState.matchIds.map(String));
+  return galleryCards().filter(c=>set.has(String(c.dataset.photoId)));
+}
+function updateSearchNavigatorPosition(){
+  if(!gallerySearchState.query||!gallerySearchState.matchIds.length)return;
+
+  const cards=searchMatchCards();
+  if(!cards.length)return;
+
+  const viewportAnchor=window.innerHeight*0.40;
+  let best=0,bestDist=Infinity;
+  cards.forEach((card,i)=>{
+    const rect=card.getBoundingClientRect();
+    const center=rect.top+rect.height/2;
+    const d=Math.abs(center-viewportAnchor);
+    if(d<bestDist){bestDist=d;best=i}
+  });
+
+  gallerySearchState.activeIndex=best;
+  cards.forEach((c,i)=>c.classList.toggle('search-current',i===best));
+
+  const total=cards.length;
+  const above=best;
+  const below=Math.max(0,total-best-1);
+
+  const big=document.getElementById('gallery-search-big-position');
+  if(big)big.textContent=`${best+1} / ${total}`;
+
+  const pos=document.getElementById('gallery-search-position');
+  if(pos)pos.textContent=`Currently nearest match: ${best+1} of ${total}`;
+
+  const dist=document.getElementById('gallery-search-distance');
+  if(dist){
+    if(total===1)dist.textContent='This is the only matching photo';
+    else if(below>0 && above>0)dist.textContent=`${above} match${above===1?'':'es'} above · ${below} match${below===1?'':'es'} below`;
+    else if(below>0)dist.textContent=`${below} more match${below===1?'':'es'} below ↓`;
+    else dist.textContent=`${above} match${above===1?'':'es'} above ↑ · Last match`;
+  }
+}
+
+function galleryCleanMatchLabel(reason){
+  const original=String(reason||'').trim();
+  let x=original;
+  if(!x)return '';
+  x=x.replace(/^Possible Match\s*—\s*Unverified:\s*/i,'');
+  x=x.replace(/^(Player|Person|Tag|School|Team|Sport|Location|Subject|Product|Custom|Event):\s*/i,'');
+  if(/^(?:Player|Possible Match)/i.test(original))x=x.split(' · ')[0].trim();
+  return x;
+}
+function galleryDistinctMatchLabels(data){
+  const seen=new Map();
+  for(const item of data.matches||[]){
+    for(const reason of item.reasons||[]){
+      const label=galleryCleanMatchLabel(reason);
+      if(!label)continue;
+      const key=label.toLowerCase();
+      if(!seen.has(key))seen.set(key,label);
+    }
+  }
+  return [...seen.values()].slice(0,18);
+}
+function renderGalleryMatchTerms(data){
+  const box=document.getElementById('gallery-search-terms');
+  if(!box)return;
+  const labels=galleryDistinctMatchLabels(data);
+  if(!labels.length){
+    box.hidden=true;
+    box.innerHTML='';
+    return;
+  }
+  box.hidden=false;
+  box.innerHTML='<span class="match-terms-label">Matches found:</span>';
+  for(const label of labels){
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='match-term-chip';
+    btn.textContent=label;
+    btn.onclick=()=>{
+      const input=document.getElementById('gallery-search-input');
+      if(input)input.value=label;
+      runGallerySearch(label);
+    };
+    box.appendChild(btn);
+  }
+}
+
+function applyGallerySearchResults(data){
+  gallerySearchState.query=String(data.query||'').trim();
+  gallerySearchState.matchIds=(data.matched_photo_ids||[]).map(String);
+  gallerySearchState.matches=new Map((data.matches||[]).map(x=>[String(x.photo_id),x]));
+  renderGalleryMatchTerms(data);
+
+  const matchSet=new Set(gallerySearchState.matchIds);
+  const cards=galleryCards();
+
+  cards.forEach(card=>{
+    const id=String(card.dataset.photoId||'');
+    const isMatch=matchSet.has(id);
+    card.classList.toggle('search-match',isMatch);
+    card.classList.toggle('search-dim',!isMatch);
+    card.classList.remove('search-current');
+
+    const old=card.querySelector('.v21-4-match-badge');
+    if(old)old.remove();
+
+    if(isMatch){
+      const info=gallerySearchState.matches.get(id);
+      const badge=document.createElement('div');
+      badge.className='v21-4-match-badge';
+      badge.textContent=info?.has_unverified?'MATCH · UNVERIFIED':'MATCH';
+      card.querySelector('.sale-photo')?.appendChild(badge);
+      card.dataset.searchReasons=(info?.reasons||[]).join(' | ');
+    }
+  });
+
+  const nav=document.getElementById('gallery-search-nav');
+  nav.hidden=false;
+  nav.classList.add('search-active');
+
+  document.getElementById('gallery-search-query').textContent=gallerySearchState.query
+    ?`“${gallerySearchState.query}”`
+    :'';
+  document.getElementById('gallery-search-count').textContent=
+    `${gallerySearchState.matchIds.length} matching photo${gallerySearchState.matchIds.length===1?'':'s'} in this gallery`;
+
+  if(!gallerySearchState.matchIds.length){
+    document.getElementById('gallery-search-position').textContent='No matching photos in this gallery';
+    document.getElementById('gallery-search-distance').textContent='';
+    const big=document.getElementById('gallery-search-big-position');
+    if(big)big.textContent='0';
+  }
+
+  updateSearchNavigatorPosition();
+
+  if(gallerySearchState.matchIds.length){
+    setTimeout(()=>searchMatchCards()[0]?.scrollIntoView({behavior:'smooth',block:'center'}),120);
+  }
+}
+async function runGallerySearch(q,opts={}){
+  q=String(q??document.getElementById('gallery-search-input')?.value??'').trim();
+  const input=document.getElementById('gallery-search-input');
+  if(input)input.value=q;
+
+  if(!q){
+    clearGallerySearch();
+    return;
+  }
+
+  try{
+    const d=await ActionAPI.request(`/api/galleries/${encodeURIComponent(shoot.id)}/search?q=${encodeURIComponent(q)}`);
+    applyGallerySearchResults(d);
+
+    const url=new URL(location.href);
+    url.searchParams.set('q',q);
+    history.replaceState(null,'',url);
+
+  }catch(e){
+    const nav=document.getElementById('gallery-search-nav');
+    nav.hidden=false;
+    nav.classList.add('search-active');
+    document.getElementById('gallery-search-query').textContent=q;
+    document.getElementById('gallery-search-count').textContent='Search failed';
+    document.getElementById('gallery-search-position').textContent=String(e?.message||e);
+    const big=document.getElementById('gallery-search-big-position');
+    if(big)big.textContent='!';
+  }
+}
+function clearGallerySearch(){
+  gallerySearchState={query:'',matchIds:[],matches:new Map(),activeIndex:-1,observer:null};
+  clearGallerySearchVisuals();
+
+  const input=document.getElementById('gallery-search-input');
+  if(input)input.value='';
+  const terms=document.getElementById('gallery-search-terms');
+  if(terms){terms.hidden=true;terms.innerHTML='';}
+
+  const nav=document.getElementById('gallery-search-nav');
+  if(nav){
+    nav.hidden=false;
+    nav.classList.remove('search-active');
+    document.getElementById('gallery-search-query').textContent='';
+    document.getElementById('gallery-search-count').textContent='Showing full gallery';
+    document.getElementById('gallery-search-position').textContent='';
+    document.getElementById('gallery-search-distance').textContent='';
+    const big=document.getElementById('gallery-search-big-position');
+    if(big)big.textContent='—';
+  }
+
+  const url=new URL(location.href);
+  url.searchParams.delete('q');
+  history.replaceState(null,'',url);
+}
+function jumpGallerySearch(delta){
+  const cards=searchMatchCards();
+  if(!cards.length)return;
+  let i=gallerySearchState.activeIndex;
+  if(i<0)i=0;
+  i=Math.max(0,Math.min(cards.length-1,i+delta));
+  gallerySearchState.activeIndex=i;
+  cards[i].scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(updateSearchNavigatorPosition,350);
+}
+function initGallerySearch(){
+  const nav=document.getElementById('gallery-search-nav');
+  if(!nav)return;
+
+  nav.hidden=true;
+  nav.classList.remove('search-active');
+  document.getElementById('gallery-search-run').onclick=()=>runGallerySearch();
+  document.getElementById('gallery-search-clear').onclick=clearGallerySearch;
+  document.getElementById('gallery-search-prev').onclick=()=>jumpGallerySearch(-1);
+  document.getElementById('gallery-search-next').onclick=()=>jumpGallerySearch(1);
+  document.getElementById('gallery-search-input').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();runGallerySearch()}
+    if(e.key==='Escape'){e.preventDefault();clearGallerySearch()}
+  });
+
+  window.addEventListener('scroll',()=>{
+    if(gallerySearchState.query)requestAnimationFrame(updateSearchNavigatorPosition);
+  },{passive:true});
+
+  const initial=new URLSearchParams(location.search).get('q')||'';
+  if(initial.trim()){
+    document.getElementById('gallery-search-input').value=initial.trim();
+    setTimeout(()=>runGallerySearch(initial.trim()),180);
+  }else{
+    nav.hidden=true;
+  }
+}
+
+
+load();
+</script>
+<script>
+let shootPlayerMe=null;
+async function refreshShootPlayer(){
+  const more=document.getElementById('shoot-my-events');
+  if(!shoot)return;
+  try{shootPlayerMe=await ActionAPI.request('/api/auth/me')}catch{shootPlayerMe={logged_in:false}}
+  if(!shootPlayerMe.logged_in){
+    more.hidden=true; decorateClaimButtons(); return;
+  }
+  const u=shootPlayerMe.user||{};
+  if(u.athlete_verification_status!=='verified'){
+    more.hidden=true; decorateClaimButtons(); return;
+  }
+  decorateClaimButtons();
+  try{
+    const d=await ActionAPI.request('/api/player/my-events');
+    const rows=d.events||[];
+    more.hidden=false;
+    more.innerHTML=`<div class="shoot-other-events-head"><strong>More Events With Approved Photos of You</strong><span>You can select multiple existing events for a future single checkout. Each event package remains separate.</span></div>
+      <div class="shoot-other-events-list">${rows.map(e=>`<label class="shoot-other-event ${e.gallery_id===shoot.id?'current':''}">
+        <input type="checkbox" class="athlete-event-select" value="${esc(e.gallery_id)}" ${e.gallery_id===shoot.id?'checked':''}>
+        <span><b>${esc(e.title)}</b><small>${e.gallery_id===shoot.id?'Current event · ':''}${e.approved_photo_count} approved photo${Number(e.approved_photo_count)===1?'':'s'}</small></span>
+        ${e.gallery_id===shoot.id?'<em>Current</em>':`<button type="button" class="peek-event" data-gallery="${esc(e.gallery_id)}">Preview</button>`}
+      </label>`).join('')||'<div class="mini-note">No other approved events yet.</div>'}
+      <div id="event-preview-inline"></div>`;
+    more.querySelectorAll('.peek-event').forEach(b=>b.onclick=()=>previewMyEvent(b.dataset.gallery));
+  }catch(e){more.hidden=true}
+}
+function decorateClaimButtons(){
+  if(!shoot)return;
+  document.querySelectorAll('.sale-item').forEach(card=>{
+    const host=card.querySelector('.photo-player-actions');
+    if(!host)return;
+    const pid=card.dataset.photoId;
+    if(!shootPlayerMe?.logged_in){host.innerHTML='';return}
+    if(shootPlayerMe.user?.athlete_verification_status!=='verified'){
+      host.innerHTML='<span class="mini-note">“That’s Me” available after athlete verification.</span>';return;
+    }
+    if(!pid){host.innerHTML='';return}
+    host.innerHTML=`<button type="button" class="button thats-me-btn">That’s Me</button><span class="claim-result"></span>`;
+    host.querySelector('.thats-me-btn').onclick=async()=>{
+      const btn=host.querySelector('.thats-me-btn'),res=host.querySelector('.claim-result');
+      btn.disabled=true;res.textContent='Submitting…';
+      const memberships=shootPlayerMe.memberships||[];
+      const membership=memberships.length===1?memberships[0]:null;
+      const jersey=membership?.jersey_numbers?.length===1?membership.jersey_numbers[0].jersey_number:null;
+      try{
+        const d=await ActionAPI.request('/api/player/photo-claims',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+          gallery_id:shoot.id,photo_id:pid,membership_id:membership?.id||null,jersey_number:jersey||null
+        })});
+        res.textContent=d.already_verified?'Already verified as you.':(d.status==='approved'?'Approved.':'Claim submitted for approval.');
+        btn.textContent=d.already_verified?'Verified ✓':'Claimed ✓';
+      }catch(e){res.textContent=e.message;btn.disabled=false}
+    };
+  });
+}
+async function previewMyEvent(gid){
+  const box=document.getElementById('event-preview-inline');
+  box.innerHTML='<div class="mini-note">Loading approved photos…</div>';
+  try{
+    const d=await ActionAPI.request('/api/player/my-photos?gallery_id='+encodeURIComponent(gid));
+    box.innerHTML=`<div class="inline-event-preview">${(d.photos||[]).map(p=>`<img src="${esc(ActionAPI.base()+p.preview_url)}" alt="${esc(p.filename)}">`).join('')||'<span>No approved photos.</span>'}</div>`;
+  }catch(e){box.innerHTML='<div class="mini-note">'+esc(e.message)+'</div>'}
+}
+</script>
+
+<script>ActionPricing?.load?.();</script>
+<script>
+(function(){
+  const originalFetch=window.fetch;
+  const qs=new URLSearchParams(location.search);
+  const galleryId=qs.get('id');
+  if(!galleryId)return;
+
+  const guestKey=(()=>{
+    let k=localStorage.getItem('31action_rating_guest_key');
+    if(!k){k='guest-'+crypto.randomUUID();localStorage.setItem('31action_rating_guest_key',k)}
+    return k;
+  })();
+
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  async function loadRatings(){
+    try{
+      const [summary,fans]=await Promise.all([
+        ActionAPI.request(`/api/galleries/${encodeURIComponent(galleryId)}/ratings?guest_key=${encodeURIComponent(guestKey)}`),
+        ActionAPI.request(`/api/galleries/${encodeURIComponent(galleryId)}/fan-favorites`)
+      ]);
+      const map=new Map((summary.ratings||[]).map(x=>[String(x.photo_id),x]));
+      decoratePhotos(map);
+      renderFans(fans.photos||[]);
+    }catch(e){console.warn('Ratings unavailable',e)}
+  }
+
+  function photoCards(){
+    return [...document.querySelectorAll('[data-photo-id], .shoot-photo, .gallery-photo, .photo-card')]
+      .filter(el=>el.querySelector('img'));
+  }
+
+  function photoId(card){
+    return card.dataset.photoId||card.getAttribute('data-id')||card.dataset.id||'';
+  }
+
+  function decoratePhotos(map){
+    photoCards().forEach(card=>{
+      const id=photoId(card);if(!id||card.querySelector('.photo-rating-ui'))return;
+      const stat=map.get(String(id))||{};
+      const wrap=document.createElement('div');
+      wrap.className='photo-rating-ui';
+      wrap.innerHTML=`
+        <div class="photo-rating-title">Rate for Fan Favorites</div>
+        <div class="photo-rating-stars" role="group" aria-label="Rate this photo 1 to 5 stars">
+          ${[1,2,3,4,5].map(n=>`<button type="button" data-rating="${n}" aria-label="${n} star${n===1?'':'s'}">★</button>`).join('')}
+        </div>
+        <div class="photo-rating-summary">${stat.rating_count?`${stat.average_rating} ★ · ${stat.rating_count} rating${stat.rating_count==1?'':'s'}`:'No ratings yet'}</div>`;
+      const myRating=Number(stat.my_rating)||0;
+      wrap.dataset.myRating=String(myRating);
+      wrap.querySelectorAll('[data-rating]').forEach(b=>b.classList.toggle('selected',+b.dataset.rating<=myRating));
+      const saleCopy=card.querySelector('.sale-copy');
+      const purchaseRow=saleCopy?.querySelector('.product-row');
+      if(saleCopy && purchaseRow)saleCopy.insertBefore(wrap,purchaseRow);
+      else card.appendChild(wrap);
+      wrap.querySelectorAll('[data-rating]').forEach(btn=>btn.onclick=async()=>{
+        const clicked=+btn.dataset.rating;
+        const current=Number(wrap.dataset.myRating)||0;
+        const rating=current===clicked?0:clicked;
+        try{
+          const d=await ActionAPI.request('/api/photo-ratings',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({gallery_id:galleryId,photo_id:id,guest_key:guestKey,rating})
+          });
+          wrap.dataset.myRating=String(rating);
+          wrap.querySelectorAll('[data-rating]').forEach(b=>b.classList.toggle('selected',rating>0&&+b.dataset.rating<=rating));
+          const count=Number(d.summary?.rating_count)||0;
+          const avg=d.summary?.average_rating;
+          wrap.querySelector('.photo-rating-summary').textContent=count?`${avg} ★ · ${count} rating${count===1?'':'s'}`:'No ratings yet';
+          refreshFans();
+        }catch(e){
+          console.warn('Rating could not be saved',e);
+        }
+      });
+    });
+  }
+
+  async function refreshFans(){
+    try{
+      const d=await ActionAPI.request(`/api/galleries/${encodeURIComponent(galleryId)}/fan-favorites`);
+      renderFans(d.photos||[]);
+    }catch(_){}
+  }
+
+  function renderFans(rows){
+    const section=document.getElementById('fan-favorites-section'),grid=document.getElementById('fan-favorites-grid');
+    if(!section||!grid||!rows.length){if(section)section.hidden=true;return}
+    section.hidden=false;
+    grid.innerHTML=rows.slice(0,12).map((p,i)=>`
+      <article class="fan-favorite-card">
+        <div class="fan-rank">#${i+1}</div>
+        ${p.preview_url?`<img src="${esc(ActionAPI.base()+p.preview_url)}" alt="${esc(p.filename||'Fan favorite photo')}">`:''}
+        <div><strong>${esc(p.filename||'Photo')}</strong><span>${p.average_rating} ★ · ${p.rating_count} rating${p.rating_count==1?'':'s'}</span></div>
+      </article>`).join('');
+  }
+
+  // Galleries render asynchronously; decorate after load and on DOM changes.
+  const obs=new MutationObserver(()=>decoratePhotos(new Map()));
+  obs.observe(document.body,{childList:true,subtree:true});
+  setTimeout(loadRatings,500);
+})();
+</script>
+
+
+<script>
+(function(){
+  const link=[...document.querySelectorAll('a[href="player.html"]')].find(a=>a.closest('.main-nav')) || document.querySelector('a[href="player.html"]');
+  if(!link||!window.ActionAPI)return;
+  ActionAPI.request('/api/auth/me').then(me=>{
+    if(!me?.logged_in)return;
+    return ActionAPI.request('/api/account/notifications');
+  }).then(d=>{
+    if(!d?.unread_count)return;
+    let badge=link.querySelector('.account-notification-badge');
+    if(!badge){
+      badge=document.createElement('span');
+      badge.className='account-notification-badge';
+      link.appendChild(badge);
+    }
+    badge.textContent=String(Math.min(99,Number(d.unread_count)||0));
+  }).catch(()=>{});
+})();
+</script>
+
+</body></html>

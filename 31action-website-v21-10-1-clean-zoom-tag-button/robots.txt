@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /visual-editor.html
+Disallow: /seo-manager.html
+Disallow: /sales.html
+
+Sitemap: https://31action.com/sitemap.xml

@@ -1,0 +1,413 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Player / Client Login | 31 ACTION</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="index.html"><span class="brand-main"><span class="n">31</span><span class="a">ACTION</span></span><span class="brand-sub">PHOTOGRAPHY BY SCOTT HENRY</span></a>
+  <button class="menu-btn">MENU</button>
+  <nav class="main-nav">
+    <a href="index.html">Home</a><a href="work.html">Portfolio</a><a href="reels.html">Reels</a><a href="recent-shoots.html">Recent Events</a>
+    <a href="about.html">About</a><a href="contact.html">Contact</a><a class="active" href="player.html">Player / Client Login</a>
+    <a class="cart-link" href="cart.html">Cart <span class="cart-count" hidden>0</span></a>
+  </nav>
+</header>
+
+<main class="player-wrap">
+  <section class="player-hero">
+    <div class="kicker">PLAYER / CLIENT ACCESS</div>
+    <h1>Player / Client Login</h1>
+    <p>Players, parents, and clients can use one account. Search by first name, last name, full or partial name, sport, team, jersey number, product, subject, location, or other tags.</p>
+  </section>
+
+  <section class="player-search-card">
+    <h2>Search</h2>
+    <div class="player-search-row">
+      <input id="player-search-q" placeholder="Name, product, subject, location, team…">
+      <input id="player-search-jersey" placeholder="Jersey #">
+      <button id="player-search-btn" class="primary-btn">Search</button>
+    </div>
+    <div id="player-search-results" class="player-search-results"></div>
+  </section>
+
+  <section id="auth-card" class="player-auth-card">
+    <div id="auth-choice" class="auth-choice">
+      <div class="auth-choice-copy">
+        <div class="kicker">ACCOUNT ACCESS</div>
+        <h2>Player / Client Login</h2>
+        <p>Sign in to access your photos, claims, downloads, and client galleries.</p>
+      </div>
+      <div class="auth-choice-actions">
+        <button id="show-login" class="primary-btn auth-big-btn">Player / Client Login</button>
+        <button id="show-register" class="button auth-big-btn">Create New Player / Client Account</button>
+      </div>
+    </div>
+
+    <div id="login-panel" class="auth-panel" hidden>
+      <button id="login-back" class="auth-back" type="button">← Back</button>
+      <form id="login-form" class="player-form auth-single-form">
+        <div class="kicker">PLAYER / CLIENT LOGIN</div>
+        <h2>Sign In</h2>
+        <label>Email
+          <input id="login-email" type="email" autocomplete="email" required>
+        </label>
+        <label>Password
+          <input id="login-password" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="primary-btn">Login</button>
+        <div id="login-status" class="mini-note"></div>
+      </form>
+
+      <div id="unknown-email-prompt" class="unknown-email-prompt" hidden>
+        <h3>Email Not Recognized</h3>
+        <p>We don’t recognize <strong id="unknown-email-address"></strong>. Would you like to create an account?</p>
+        <div class="unknown-email-actions">
+          <button id="unknown-email-yes" class="primary-btn" type="button">Yes, Create Account</button>
+          <button id="unknown-email-no" class="button" type="button">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="register-panel" class="auth-panel" hidden>
+      <button id="register-back" class="auth-back" type="button">← Back</button>
+      <form id="register-form" class="player-form auth-single-form">
+        <div class="kicker">NEW ACCOUNT</div><h2>Create Player / Client Account</h2>
+
+        <fieldset class="role-picker">
+          <legend>I am a…</legend>
+          <label class="role-option"><input type="checkbox" name="account-role" value="player"><span><b>Player</b><small>I want to find and claim photos of myself.</small></span></label>
+          <label class="role-option"><input type="checkbox" name="account-role" value="parent"><span><b>Parent / Guardian</b><small>I manage photos for a player.</small></span></label>
+          <label class="role-option"><input type="checkbox" name="account-role" value="client"><span><b>Client</b><small>Wedding, portrait, event, commercial, or other commissioned shoot.</small></span></label>
+          <label class="role-option"><input type="checkbox" name="account-role" value="other"><span><b>Other</b><small>General account access.</small></span></label>
+        </fieldset>
+
+        <label>Email<input id="reg-email" type="email" autocomplete="email" required></label>
+        <label>Password<input id="reg-password" type="password" minlength="10" autocomplete="new-password" required></label>
+        <label>Name<input id="reg-name" required placeholder="First and last name"></label>
+
+        <div id="player-fields" class="player-only-fields" hidden>
+          <fieldset class="sport-picker">
+            <legend>Sport(s)</legend>
+            <label><input type="checkbox" name="sport" value="baseball"><span>Baseball</span></label>
+            <label><input type="checkbox" name="sport" value="football"><span>Football</span></label>
+            <label><input type="checkbox" name="sport" value="lacrosse"><span>Lacrosse</span></label>
+            <label><input type="checkbox" name="sport" value="soccer"><span>Soccer</span></label>
+            <label><input type="checkbox" name="sport" value="track"><span>Track</span></label>
+            <label><input type="checkbox" name="sport" value="pool"><span>Pool</span></label>
+            <label><input type="checkbox" name="sport" value="other"><span>Other</span></label>
+          </fieldset>
+
+          <label id="custom-sport-label" hidden>Other Sport<input id="reg-custom-sport" placeholder="Enter sport"></label>
+          <label>Team<input id="reg-team" placeholder="Optional"></label>
+          <label>Jersey number(s)
+            <input id="reg-jerseys" placeholder="Example: 4 17 or 4, 17">
+          </label>
+          <div id="jersey-preview" class="jersey-preview" hidden></div>
+        </div>
+
+        <button class="primary-btn">Create Account</button>
+        <div class="mini-note">Player accounts require 31 ACTION verification before “That’s Me” claims or athlete-package access. Client gallery access is granted separately by 31 ACTION.</div>
+        <div id="reg-status" class="mini-note"></div>
+      </form>
+    </div>
+  </section>
+
+  <section id="account-card" class="player-account-card" hidden>
+    <section id="player-tag-approvals" class="v21-player-approvals" hidden>
+      <div class="account-notifications-head"><div><div class="kicker">PLAYER TAGS</div><h3>Possible Photos of You</h3></div></div>
+      <div id="player-tag-approval-list"></div>
+    </section>
+    <section id="account-notifications" class="account-notifications" hidden>
+      <div class="account-notifications-head">
+        <div><div class="kicker">NEW ACTIVITY</div><h3>New Since Your Last Login</h3></div>
+        <button id="mark-all-notifications" class="button">Mark All Read</button>
+      </div>
+      <div id="account-notification-list"></div>
+    </section>
+    <div class="player-account-head">
+      <div><div class="kicker">MY ACCOUNT</div><h2 id="account-name"></h2><p id="account-status"></p></div>
+      <button id="logout-btn" class="button">Log Out</button>
+    </div>
+    <div id="account-memberships" class="player-memberships"></div>
+    <div id="client-gallery-section" class="client-gallery-section" hidden>
+      <h3>My Client Galleries</h3>
+      <p class="mini-note">Client galleries may include full-resolution digital downloads and print ordering, depending on the access granted by 31 ACTION.</p>
+      <div id="client-gallery-list"></div>
+    </div>
+
+    <div class="player-my-events">
+      <h3>Events With Approved Photos of You</h3>
+      <p class="mini-note">The “All Photos of One Player” digital package is $35 per player, per event. Team/group photos are excluded. You can select more than one existing event for a future single checkout.</p>
+      <div id="my-events-list"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer"><a class="footer-brand" href="index.html"><span class="n">31</span><span class="a">ACTION</span></a></footer>
+
+<script src="assets/js/api-config.js"></script>
+<script src="assets/js/site.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let me=null;
+
+async function refreshMe(){
+  try{ me=await ActionAPI.request('/api/auth/me'); }catch(e){ me={logged_in:false}; }
+  $('auth-card').hidden=!!me.logged_in;
+  $('account-card').hidden=!me.logged_in;
+  if(!me.logged_in){
+    showAuthChoice();
+    return;
+  }
+  const u=me.user||{};
+  $('account-name').textContent=u.player_name||u.display_name||u.email||'My Account';
+  const status=u.athlete_verification_status==='verified'?'Verified athlete/person':(me.athlete_request?.status==='pending'?'Athlete verification pending':'Account active');
+  $('account-status').textContent=status;
+  $('account-memberships').innerHTML=(me.memberships||[]).map(m=>`<div class="player-membership"><strong>${esc(m.sport)}</strong><span>${esc(m.team||'')}</span><div>${(m.jersey_numbers||[]).map(j=>`<b>#${esc(j.jersey_number)}</b>`).join(' ')}</div></div>`).join('');
+  renderClientGalleries();
+  await Promise.all([loadMyEvents(),loadNotifications(),loadPlayerTagApprovals()]);
+}
+async function loadMyEvents(){
+  const box=$('my-events-list');
+  try{
+    const d=await ActionAPI.request('/api/player/my-events');
+    const rows=d.events||[];
+    box.innerHTML=rows.length?rows.map(e=>`<label class="my-event-row">
+      <input type="checkbox" class="my-event-select" value="${esc(e.gallery_id)}">
+      <span><strong>${esc(e.title)}</strong><small>${esc(e.shoot_date||'')} · ${e.approved_photo_count} approved photo${Number(e.approved_photo_count)===1?'':'s'}</small></span>
+      <a href="shoot.html?id=${encodeURIComponent(e.gallery_id)}">View Event</a>
+    </label>`).join(''):'<div class="empty-state small">No approved event photos yet.</div>';
+  }catch(e){box.innerHTML='<div class="empty-state small">Could not load your events.</div>'}
+}
+function showAuthChoice(){
+  $('auth-choice').hidden=false;
+  $('login-panel').hidden=true;
+  $('register-panel').hidden=true;
+  $('unknown-email-prompt').hidden=true;
+  $('login-status').textContent='';
+}
+function showLogin(){
+  $('auth-choice').hidden=true;
+  $('login-panel').hidden=false;
+  $('register-panel').hidden=true;
+  $('unknown-email-prompt').hidden=true;
+  setTimeout(()=>$('login-email').focus(),0);
+}
+function showRegister(prefillEmail=''){
+  $('auth-choice').hidden=true;
+  $('login-panel').hidden=true;
+  $('register-panel').hidden=false;
+  if(prefillEmail)$('reg-email').value=prefillEmail;
+  setTimeout(()=>$(prefillEmail?'reg-password':'reg-email').focus(),0);
+}
+$('show-login').onclick=showLogin;
+$('show-register').onclick=()=>showRegister();
+$('login-back').onclick=showAuthChoice;
+$('register-back').onclick=showAuthChoice;
+$('unknown-email-no').onclick=()=>{
+  $('unknown-email-prompt').hidden=true;
+  $('login-status').textContent='';
+  $('login-email').focus();
+};
+$('unknown-email-yes').onclick=()=>{
+  const email=$('login-email').value.trim();
+  showRegister(email);
+};
+
+$('login-form').onsubmit=async e=>{
+  e.preventDefault();
+  const st=$('login-status');
+  $('unknown-email-prompt').hidden=true;
+  st.textContent='Logging in…';
+  const email=$('login-email').value.trim();
+  try{
+    await ActionAPI.request('/api/auth/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:$('login-password').value})
+    });
+    st.textContent='';
+    await refreshMe();
+  }catch(err){
+    const message=String(err?.message||'');
+    if(/don't recognize that email|email_not_found/i.test(message)){
+      st.textContent='';
+      $('unknown-email-address').textContent=email;
+      $('unknown-email-prompt').hidden=false;
+    }else{
+      st.textContent=message||'Login failed.';
+    }
+  }
+};
+function selectedRoles(){
+  return [...document.querySelectorAll('input[name="account-role"]:checked')].map(x=>x.value);
+}
+function selectedSports(){
+  return [...document.querySelectorAll('input[name="sport"]:checked')].map(x=>x.value);
+}
+function normalizeJerseys(value){
+  return [...new Set(String(value||'').trim().split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean))];
+}
+function updateRoleFields(){
+  const roles=selectedRoles();
+  $('player-fields').hidden=!roles.includes('player');
+}
+function updateSportFields(){
+  $('custom-sport-label').hidden=!selectedSports().includes('other');
+}
+function updateJerseyPreview(){
+  const values=normalizeJerseys($('reg-jerseys').value);
+  const box=$('jersey-preview');
+  if(values.length>1){
+    box.hidden=false;
+    box.innerHTML=`We read that as: <strong>${values.map(esc).join(', ')}</strong>. Is that correct?`;
+  }else if(values.length===1){
+    box.hidden=false;
+    box.innerHTML=`Jersey number: <strong>${esc(values[0])}</strong>`;
+  }else box.hidden=true;
+}
+document.querySelectorAll('input[name="account-role"]').forEach(x=>x.addEventListener('change',updateRoleFields));
+document.querySelectorAll('input[name="sport"]').forEach(x=>x.addEventListener('change',updateSportFields));
+$('reg-jerseys').addEventListener('input',updateJerseyPreview);
+
+$('register-form').onsubmit=async e=>{
+  e.preventDefault(); const st=$('reg-status');
+  const roles=selectedRoles();
+  if(!roles.length){st.textContent='Choose Player, Parent / Guardian, Client, or Other.';return}
+  const sports=selectedSports();
+  if(roles.includes('player')&&!sports.length){
+    st.textContent='Choose at least one sport for a Player account.';return;
+  }
+
+  const jerseys=normalizeJerseys($('reg-jerseys').value);
+  if(jerseys.length>1){
+    const ok=confirm(`We read your jersey numbers as: ${jerseys.join(', ')}. Is that correct?`);
+    if(!ok){$('reg-jerseys').focus();return}
+  }
+
+  st.textContent='Creating account…';
+  try{
+    await ActionAPI.request('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      email:$('reg-email').value,password:$('reg-password').value,display_name:$('reg-name').value,
+      roles,sports,custom_sport:$('reg-custom-sport').value,team:$('reg-team').value,jersey_numbers:jerseys
+    })});
+    st.textContent=roles.includes('player')
+      ?'Account created. Athlete verification is pending.'
+      :'Account created.';
+    await refreshMe();
+  }catch(err){st.textContent=err.message}
+};
+
+
+async function loadPlayerTagApprovals(){
+  const sec=document.getElementById('player-tag-approvals'),box=document.getElementById('player-tag-approval-list');
+  if(!sec||!box)return;
+  try{
+    const d=await ActionAPI.request('/api/player/player-tag-suggestions-v15');
+    const rows=d.suggestions||[];
+    sec.hidden=!rows.length;
+    if(!rows.length)return;
+    box.innerHTML=rows.map(s=>`
+      <article class="v21-player-approval-row" data-suggestion="${esc(s.id)}">
+        ${s.preview_key?`<img src="${ActionAPI.base()+'/api/preview/'+encodeURIComponent(s.preview_key)}" alt="">`:''}
+        <div><strong>${esc(s.suggested_name)}</strong>
+        <span>${esc([s.suggested_school,s.suggested_sport,s.suggested_team,s.suggested_jersey_number?`#${s.suggested_jersey_number}`:''].filter(Boolean).join(' · '))}</span>
+        <small>${esc(s.gallery_title||'')}</small></div>
+        <button class="primary-btn approve-my-player-tag">Yes, That's Me</button>
+      </article>`).join('');
+    box.querySelectorAll('.approve-my-player-tag').forEach(b=>b.onclick=async()=>{
+      try{
+        await ActionAPI.request(`/api/player/player-tag-suggestions-v15/${encodeURIComponent(b.closest('[data-suggestion]').dataset.suggestion)}/approve`,{method:'POST'});
+        await loadPlayerTagApprovals();
+      }catch(e){alert(e.message)}
+    });
+  }catch(e){sec.hidden=true}
+}
+async function loadNotifications(){
+  const section=$('account-notifications'),box=$('account-notification-list');
+  try{
+    const d=await ActionAPI.request('/api/account/notifications');
+    const rows=d.notifications||[];
+    const previous=d.previous_login_at;
+    const fresh=previous?rows.filter(n=>n.created_at>previous):rows.filter(n=>!n.read_at);
+    const show=fresh.length||d.unread_count;
+    section.hidden=!show;
+    if(!show)return;
+    box.innerHTML=rows.slice(0,40).map(n=>`
+      <article class="account-notification-row ${n.read_at?'read':'unread'}" data-notif="${esc(n.id)}">
+        <div><strong>${esc(n.title)}</strong><span>${esc(n.message||'')}</span><small>${esc(new Date(n.created_at).toLocaleString())}</small></div>
+        ${n.gallery_id?`<a class="button" href="shoot.html?id=${encodeURIComponent(n.gallery_id)}">View</a>`:''}
+      </article>`).join('')||'<div class="mini-note">No notifications.</div>';
+  }catch(e){
+    section.hidden=true;
+  }
+}
+async function markAllNotificationsRead(){
+  try{
+    await ActionAPI.request('/api/account/notifications/read-all',{method:'POST'});
+    await loadNotifications();
+  }catch(_){}
+}
+document.getElementById('mark-all-notifications')?.addEventListener('click',markAllNotificationsRead);
+
+function renderClientGalleries(){
+  const section=$('client-gallery-section'),box=$('client-gallery-list');
+  const rows=me?.client_entitlements||[];
+  section.hidden=!rows.length;
+  if(!rows.length)return;
+  box.innerHTML=rows.map(g=>`<article class="client-gallery-row">
+    <div><strong>${esc(g.title)}</strong><small>${esc(g.shoot_date||'')}</small></div>
+    <div class="client-access-badges">
+      ${g.can_download_all?'<span>All Digitals Included</span>':''}
+      ${g.can_order_prints?'<span>Print Ordering</span>':''}
+    </div>
+    <a class="button" href="shoot.html?id=${encodeURIComponent(g.gallery_id)}">Open Gallery</a>
+  </article>`).join('');
+}
+
+$('logout-btn').onclick=async()=>{try{await ActionAPI.request('/api/auth/logout',{method:'POST'})}catch{};await refreshMe()};
+$('player-search-btn').onclick=searchAll;
+$('player-search-q').addEventListener('keydown',e=>{if(e.key==='Enter')searchAll()});
+async function searchAll(){
+  const q=$('player-search-q').value.trim(), jersey=$('player-search-jersey').value.trim(), out=$('player-search-results');
+  if(!q&&!jersey){out.innerHTML='<div class="mini-note">Enter a name, tag, or jersey number.</div>';return}
+  out.innerHTML='<div class="mini-note">Searching…</div>';
+  try{
+    const [people,tags]=await Promise.all([
+      ActionAPI.request('/api/athletes/search?'+new URLSearchParams({q,jersey}).toString()),
+      q?ActionAPI.request('/api/search?'+new URLSearchParams({q}).toString()):Promise.resolve({photos:[],tags:[]})
+    ]);
+    const personHtml=(people.athletes||[]).map(a=>`<article class="search-person-card"><strong>${esc(a.player_name)}</strong>${(a.memberships||[]).map(m=>`<span>${esc(m.sport||'')}${m.team?' · '+esc(m.team):''}${m.jersey_numbers?.length?' · #'+m.jersey_numbers.map(esc).join(', #'):''}</span>`).join('')}</article>`).join('');
+    const photoHtml=(tags.photos||[]).slice(0,60).map(p=>`<a class="search-photo-card" href="shoot.html?id=${encodeURIComponent(p.gallery_id)}"><img src="${esc(ActionAPI.base()+p.preview_url)}"><span><strong>${esc(p.gallery_title)}</strong><small>${esc(p.matched_tag_type)}: ${esc(p.matched_tag)}</small></span></a>`).join('');
+    out.innerHTML=(personHtml||photoHtml)?`<div class="search-people">${personHtml}</div><div class="search-tagged-photos">${photoHtml}</div>`:'<div class="empty-state small">No matches found.</div>';
+  }catch(e){out.innerHTML='<div class="empty-state small">'+esc(e.message)+'</div>'}
+}
+refreshMe();
+</script>
+
+<script>
+(function(){
+  const link=[...document.querySelectorAll('a[href="player.html"]')].find(a=>a.closest('.main-nav')) || document.querySelector('a[href="player.html"]');
+  if(!link||!window.ActionAPI)return;
+  ActionAPI.request('/api/auth/me').then(me=>{
+    if(!me?.logged_in)return;
+    return ActionAPI.request('/api/account/notifications');
+  }).then(d=>{
+    if(!d?.unread_count)return;
+    let badge=link.querySelector('.account-notification-badge');
+    if(!badge){
+      badge=document.createElement('span');
+      badge.className='account-notification-badge';
+      link.appendChild(badge);
+    }
+    badge.textContent=String(Math.min(99,Number(d.unread_count)||0));
+  }).catch(()=>{});
+})();
+</script>
+
+</body></html>

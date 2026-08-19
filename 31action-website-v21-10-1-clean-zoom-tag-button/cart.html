@@ -1,0 +1,282 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cart | 31 ACTION</title><link rel="stylesheet" href="assets/css/styles.css"><script src="https://js.stripe.com/v3/"></script>
+</head><body><header class="site-header"><a class="brand" href="index.html"><span class="brand-main"><span class="n">31</span><span class="a">ACTION</span></span><span class="brand-sub">PHOTOGRAPHY BY SCOTT HENRY</span></a><button class="menu-btn">MENU</button><nav class="main-nav"><a class="" href="index.html">Home</a><a class="" href="work.html">Portfolio</a><a class="" href="reels.html">Reels</a><a class="" href="recent-shoots.html">Recent Events</a><a class="" href="about.html">About</a><a class="" href="contact.html">Contact</a><a class="player-link" href="player.html">Player / Client Login</a><a class="cart-link" href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a class="instagram instagram-link" href="https://www.instagram.com/northcountyunofficial/" target="_blank" rel="noopener" aria-label="Instagram">
+<svg class="instagram-icon" viewBox="0 0 24 24" aria-hidden="true">
+<rect x="3" y="3" width="18" height="18" rx="5" ry="5"></rect>
+<circle cx="12" cy="12" r="4.2"></circle>
+<circle cx="17.4" cy="6.7" r="1.05" class="ig-dot"></circle>
+</svg>
+<span>Instagram</span></a></nav></header><main class="cart-wrap"><div class="kicker">31 Action Store</div><h1 class="big-title">Shopping Cart</h1><div class="status-note stripe-sandbox-note"><strong>Stripe Embedded Checkout — Test Mode.</strong> Your secure payment form stays inside 31action.com. No real charges will be made.</div><div class="cart-layout"><section class="cart-items">
+<div id="checkout-guidance" class="checkout-guidance" hidden>
+  <div class="checkout-guidance-arrow">→</div>
+  <div>
+    <strong>PRESS CONTINUE TO CALCULATE SHIPPING AND TAX</strong>
+    <span>Then scroll down and press Pay to complete your order.</span>
+  </div>
+</div>
+<div id="cart-items"></div>
+<div id="summary" class="cart-summary"></div>
+</section><aside class="checkout-panel"><h2 style="margin-top:0">Customer Information</h2><form id="checkout-form" class="checkout-form"><label>First name<input name="firstName" required></label><label>Last name<input name="lastName" required></label><label class="full">Email<input name="email" type="email" required></label><label class="full">Phone<input name="phone" type="tel"></label><div id="shipping-fields" class="shipping-fields"><label class="full">Shipping address<input name="address1"></label><label class="full">Address line 2<input name="address2"></label><label>City<input name="city"></label><label>State<input name="state"></label><label>ZIP / Postal code<input name="postalCode"></label><label>Country<select name="country"><option value="US">United States</option></select></label></div><label class="full">Order notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
+<label class="full license-ack"><input name="personalUseAck" type="checkbox" value="yes" required>
+<span><strong>Personal-use license acknowledgment</strong><br>I understand that my purchase is for personal use only. Commercial, advertising, promotional, business, publication, resale, or other commercial use requires separate permission/licensing from 31 ACTION Photography. <a href="license.html" target="_blank">View license terms</a> or <a href="contact.html">contact 31 ACTION</a> for commercial use.</span></label>
+<button id="stripe-checkout-btn" class="primary-btn full" type="submit">Continue to Secure Payment — Test Mode</button></form><p class="checkout-note">Card information is handled securely by Stripe inside the embedded payment form. For prints, enter your U.S. shipping address there and 31 ACTION will calculate Prodigi Budget shipping before payment.</p><div id="order-result"></div><section id="embedded-checkout-panel" class="embedded-checkout-panel" hidden><div class="embedded-checkout-head"><div><span class="eyebrow">SECURE PAYMENT</span><h2>Complete Your Order</h2></div><button id="embedded-checkout-cancel" class="button" type="button">Back</button></div><div id="embedded-scroll-cue" class="embedded-scroll-cue">
+  ↓ SCROLL DOWN TO CONTINUE / PAY
+</div>
+<div id="embedded-checkout"></div></section></aside></div></main><footer class="site-footer"><a class="footer-brand" href="index.html"><span class="n">31</span><span class="a">ACTION</span></a><nav class="footer-nav"><a href="index.html">Home</a><a href="work.html">Portfolio</a><a href="reels.html">Reels</a><a href="recent-shoots.html">Recent Events</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="player.html">Player / Client Login</a><a href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a href="admin-gate.html" style="color:#555">Admin</a></nav></footer><script src="assets/js/crops.js"></script><script src="assets/js/api-config.js"></script><script src="assets/js/store-config.js"></script><script src="assets/js/site.js"></script><script>
+const itemsEl=document.getElementById('cart-items'),summaryEl=document.getElementById('summary'),shipEl=document.getElementById('shipping-fields');
+function money(v){return new Intl.NumberFormat('en-US',{style:'currency',currency:STORE_CONFIG.currency}).format(v)}
+const packs=[{n:3,p:25,label:'Any 3 Digitals'},{n:1,p:10,label:'Single Digital'}];
+function currentDigitalPrice(){return Number(STORE_CONFIG.products.find(x=>x.id==='digital')?.price)||10}
+function effectiveItemPrice(x){return x.productId==='digital'?currentDigitalPrice():Number(x.price)||0}
+function bestDigitalPrice(n){
+  const dp=Array(n+1).fill(Infinity),desc=Array(n+1).fill(null);dp[0]=0;desc[0]=[];
+  for(let i=1;i<=n;i++)for(const pk of packs)if(i>=pk.n&&dp[i-pk.n]+pk.p<dp[i]){
+    dp[i]=dp[i-pk.n]+pk.p;desc[i]=[...(desc[i-pk.n]||[]),pk]
+  }
+  return{price:dp[n],packs:desc[n]||[]}
+}
+function pricing(items){
+  const digital=items.filter(x=>x.productId==='digital');
+  const nonDigital=items.filter(x=>x.productId!=='digital').reduce((sum,x)=>sum+effectiveItemPrice(x)*(Number(x.quantity)||1),0);
+  const groups={};
+  digital.forEach(x=>{groups[x.shootId]=groups[x.shootId]||{title:x.shootTitle,count:0};groups[x.shootId].count+=Number(x.quantity)||1});
+  let regular=nonDigital,discount=0,details=[];
+  Object.values(groups).forEach(g=>{
+    const regularDigital=g.count*currentDigitalPrice(),b=bestDigitalPrice(g.count),save=Math.max(0,regularDigital-b.price);
+    regular+=regularDigital;discount+=save;
+    if(save>0)details.push({title:g.title,count:g.count,regular:regularDigital,price:b.price,save,packs:b.packs});
+  });
+  return{regular,discount,subtotal:regular-discount,details,groups}
+}
+function nudge(items){
+  const groups={};
+  items.filter(x=>x.productId==='digital').forEach(x=>{groups[x.shootId]=groups[x.shootId]||{title:x.shootTitle,count:0};groups[x.shootId].count+=Number(x.quantity)||1});
+  const msgs=[];
+  Object.values(groups).forEach(g=>{
+    const rem=g.count%3;
+    if(g.count<3){
+      const need=3-g.count;
+      msgs.push(`<strong>YOU'RE ${need} PHOTO${need===1?'':'S'} AWAY FROM SAVING</strong><span>Add ${need} more digital${need===1?'':'s'} from <b>${g.title}</b> to unlock Any 3 for $25.</span>`);
+    }else if(rem===0){
+      msgs.push(`<strong>ANY 3 DIGITAL PACKAGE APPLIED ✓</strong><span>${g.count} digitals selected from <b>${g.title}</b>. Package pricing is applied in groups of 3.</span>`);
+    }else{
+      const need=3-rem;
+      msgs.push(`<strong>ANY 3 DIGITAL PACKAGE APPLIED ✓</strong><span>Add ${need} more digital${need===1?'':'s'} from <b>${g.title}</b> to complete another Any 3 for $25.</span>`);
+    }
+  });
+  return msgs.length?`<div class="cart-package-nudge">${msgs.map(x=>`<div>${x}<a href="recent-shoots.html">Browse more photos →</a></div>`).join('')}<div><strong>PLAYER PACKAGE — $35</strong><span>All eligible photos of one player from one event. Team/group photos are excluded.</span></div></div>`:'';
+}
+let liveShippingCents=null;
+function renderCart(){const items=Cart.get();itemsEl.innerHTML=!items.length?'<div class="empty-state"><strong>Your cart is empty.</strong><br><br><a class="button" href="recent-shoots.html">Browse Recent Shoots</a></div>':nudge(items)+items.map(x=>`<div class="cart-item"><img src="${x.photoPath}"><div><h3>${x.productLabel}</h3><p>${x.shootTitle}</p><p>${x.filename} · Qty ${x.quantity}</p></div><div><strong>${money(effectiveItemPrice(x)*x.quantity)}</strong><br><button class="cart-remove" data-id="${x.cartId}">Remove</button></div></div>`).join('');document.querySelectorAll('.cart-remove').forEach(b=>b.onclick=()=>{Cart.remove(b.dataset.id);renderCart()});const pr=pricing(items),needShip=items.some(x=>x.requiresShipping);
+const shipping=needShip
+  ? (liveShippingCents===null ? 0 : liveShippingCents/100)
+  : 0;
+const tax=pr.subtotal*STORE_CONFIG.taxRate;
+const total=pr.subtotal+shipping+tax;
+summaryEl.innerHTML=`<div class="summary-row"><span>Regular price</span><span>${money(pr.regular)}</span></div>${pr.discount?`<div class="summary-row discount"><span>Digital package savings</span><span>−${money(pr.discount)}</span></div>`:''}<div class="summary-row"><span>Subtotal</span><span>${money(pr.subtotal)}</span></div><div class="summary-row"><span>Shipping</span><span>${needShip?(liveShippingCents===null?'Calculated after Continue':money(shipping)):'—'}</span></div><div class="summary-row"><span>Estimated tax</span><span>${money(tax)}</span></div><div class="summary-row total"><span>Total</span><span>${money(total)}</span></div>`;shipEl.style.display=needShip?'contents':'none';shipEl.querySelectorAll('input,select').forEach(i=>{
+  i.required=needShip && i.name!=='address2'
+})}
+renderCart();
+let activeEmbeddedCheckout=null;
+
+document.getElementById('checkout-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+
+  const form=e.currentTarget;
+  const btn=document.getElementById('stripe-checkout-btn');
+  const out=document.getElementById('order-result');
+  const embeddedPanel=document.getElementById('embedded-checkout-panel');
+  const embeddedMount=document.getElementById('embedded-checkout');
+
+  const items=Cart.get().map(x=>x.productId==='digital'?{...x,price:currentDigitalPrice()}:x);
+  if(!items.length){
+    alert('Your cart is empty.');
+    return;
+  }
+
+  const fd=Object.fromEntries(new FormData(form).entries());
+
+  if(fd.personalUseAck!=='yes'){
+    alert('Please accept the personal-use license acknowledgment.');
+    return;
+  }
+
+  const clientReferenceId='31A-'+new Date().toISOString().replace(/\D/g,'').slice(0,14);
+
+  const payload={
+    client_reference_id:clientReferenceId,
+    customer:{
+      firstName:fd.firstName||'',
+      lastName:fd.lastName||'',
+      email:fd.email||'',
+      phone:fd.phone||''
+    },
+    notes:fd.notes||'',
+    items:items.map(x=>({
+      cartId:x.cartId,
+      shootId:x.shootId,
+      shootTitle:x.shootTitle,
+      photoIndex:x.photoIndex,
+      photoPath:x.photoPath,
+      filename:x.filename,
+      productId:x.productId,
+      productLabel:x.productLabel,
+      quantity:Number(x.quantity)||1,
+      requiresShipping:Boolean(x.requiresShipping)
+    })),
+    licenseAcknowledgment:{
+      personalUseOnly:true,
+      acceptedAt:new Date().toISOString()
+    }
+  };
+
+  btn.disabled=true;
+  const oldText=btn.textContent;
+  btn.textContent='Loading Secure Payment…';
+  out.innerHTML='<div class="status-note"><strong>Preparing secure payment form…</strong></div>';
+
+  try{
+    const result=await ActionAPI.request('/api/checkout/embedded-session',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+
+    if(!result?.client_secret || !result?.publishable_key){
+      throw new Error('Stripe did not return the embedded checkout credentials.');
+    }
+
+    if(typeof Stripe!=='function'){
+      throw new Error('Stripe.js did not load. Refresh and try again.');
+    }
+
+    const stripe=Stripe(result.publishable_key);
+
+    const onShippingDetailsChange=async event=>{
+      try{
+        const response=await fetch('https://api.31action.com/api/checkout/shipping-quote',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            checkout_session_id:event.checkoutSessionId,
+            shipping_details:event.shippingDetails
+          })
+        });
+
+        let data={};
+        try{data=await response.json();}catch(_){}
+
+        if(!response.ok || data?.type==='error'){
+          return Promise.resolve({
+            type:'reject',
+            errorMessage:String(
+              data?.message ||
+              'Budget shipping could not be calculated for this address.'
+            )
+          });
+        }
+
+        if(Number.isFinite(Number(data?.shipping?.amount_cents))){
+          liveShippingCents=Number(data.shipping.amount_cents);
+          renderCart();
+        }
+
+        return Promise.resolve({type:'accept'});
+      }catch(err){
+        return Promise.resolve({
+          type:'reject',
+          errorMessage:'Shipping could not be calculated. Please try again.'
+        });
+      }
+    };
+
+    activeEmbeddedCheckout=await stripe.initEmbeddedCheckout({
+      clientSecret:result.client_secret,
+      onShippingDetailsChange
+    });
+
+    embeddedMount.innerHTML='';
+    activeEmbeddedCheckout.mount('#embedded-checkout');
+
+    form.hidden=true;
+    embeddedPanel.hidden=false;
+    document.getElementById('checkout-guidance').hidden=false;
+    out.innerHTML='';
+
+    // Bring the secure payment step into view automatically.
+    setTimeout(()=>{
+      embeddedPanel.scrollIntoView({behavior:'smooth',block:'start'});
+    },250);
+
+    sessionStorage.setItem('31action_pending_stripe_checkout',JSON.stringify({
+      client_reference_id:result.client_reference_id||clientReferenceId,
+      session_id:result.session_id||null,
+      created_at:new Date().toISOString(),
+      item_count:items.reduce((n,x)=>n+(Number(x.quantity)||1),0)
+    }));
+
+  }catch(err){
+    out.innerHTML=`<div class="status-note error-note"><strong>Secure payment could not be opened.</strong><br>${String(err?.message||err||'Unknown error')}</div>`;
+    btn.disabled=false;
+    btn.textContent=oldText;
+  }
+});
+
+document.getElementById('embedded-checkout-cancel').addEventListener('click',()=>{
+  try{
+    if(activeEmbeddedCheckout && typeof activeEmbeddedCheckout.destroy==='function'){
+      activeEmbeddedCheckout.destroy();
+    }
+  }catch(_){}
+  activeEmbeddedCheckout=null;
+  document.getElementById('embedded-checkout').innerHTML='';
+  document.getElementById('embedded-checkout-panel').hidden=true;
+  document.getElementById('checkout-guidance').hidden=true;
+  document.getElementById('checkout-form').hidden=false;
+  const btn=document.getElementById('stripe-checkout-btn');
+  btn.disabled=false;
+  btn.textContent='Continue to Secure Payment — Test Mode';
+  document.getElementById('order-result').innerHTML='';
+});</script><script>ActionPricing?.load?.().then(()=>renderCart());</script>
+
+<script>
+(function(){
+  const params=new URLSearchParams(location.search);
+  const stripe=params.get('stripe');
+  if(!stripe)return;
+
+  const out=document.getElementById('order-result');
+
+  if(stripe==='success'){
+    const sessionId=params.get('session_id')||'';
+    if(sessionId){
+      out.innerHTML='<div class="status-note stripe-return-success"><strong>Payment received.</strong><br>Opening your order confirmation…</div>';
+      location.replace(`order-confirmation.html?session_id=${encodeURIComponent(sessionId)}`);
+      return;
+    }
+    out.innerHTML='<div class="status-note stripe-return-success"><strong>Payment received.</strong><br>Your confirmation is being prepared.</div>';
+  }else if(stripe==='cancelled'){
+    out.innerHTML='<div class="status-note"><strong>Stripe Checkout was cancelled.</strong><br>Your cart is still here and nothing was charged.</div>';
+  }
+})();
+</script>
+<script>
+(function(){
+  const link=[...document.querySelectorAll('a[href="player.html"]')].find(a=>a.closest('.main-nav')) || document.querySelector('a[href="player.html"]');
+  if(!link||!window.ActionAPI)return;
+  ActionAPI.request('/api/auth/me').then(me=>{
+    if(!me?.logged_in)return;
+    return ActionAPI.request('/api/account/notifications');
+  }).then(d=>{
+    if(!d?.unread_count)return;
+    let badge=link.querySelector('.account-notification-badge');
+    if(!badge){
+      badge=document.createElement('span');
+      badge.className='account-notification-badge';
+      link.appendChild(badge);
+    }
+    badge.textContent=String(Math.min(99,Number(d.unread_count)||0));
+  }).catch(()=>{});
+})();
+</script>
+
+</body></html>

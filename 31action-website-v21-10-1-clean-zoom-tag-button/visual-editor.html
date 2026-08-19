@@ -1,0 +1,2010 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visual Site Editor | 31 ACTION</title>
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="v15-body">
+<header class="v15-topbar">
+  <a class="brand" href="admin.html">
+    <span class="brand-main"><span class="n">31</span><span class="a">ACTION</span></span>
+    <span class="brand-sub">VISUAL SITE EDITOR</span>
+  </a>
+  <nav id="v15-tabs" class="v15-tabs">
+    <button class="active" data-view="home">Homepage</button>
+    <button data-view="landing">Landing Slideshow</button>
+    <button data-view="sports">Sports</button>
+    <button data-view="portraits">Portraits</button>
+    <button data-view="events">Events</button>
+    <button data-view="other">Other</button>
+    <button data-view="reels">Reels</button>
+    <button data-view="athletes">Athletes</button>
+    <button data-view="accounts">Accounts / Clients</button>
+    <button data-view="rosters">Rosters</button>
+    <button data-view="reports">Reports / Activity</button>
+    <button data-view="tags">Tags</button>
+    <button data-view="recent">Recent Events</button>
+  </nav>
+  <a class="button" href="admin.html">Admin</a>
+</header>
+
+<div class="v15-auth">
+  <label>Admin Token <input id="v15-token" type="password" autocomplete="off"></label>
+  <button id="v15-connect" class="button">Connect</button>
+  <span id="v15-status">Not connected</span>
+</div>
+
+<main id="v15-main"></main>
+
+<!-- Cover crop modal. Landing slideshow crops are edited inline in the batch editor. -->
+<div id="cover-modal" class="v15-modal" hidden>
+  <div class="v15-modal-panel">
+    <div class="v15-modal-head">
+      <div><div class="kicker">COVER CROP</div><h2 id="cover-name"></h2></div>
+      <button id="cover-close" class="button">Close</button>
+    </div>
+    <div class="v15-device-tabs">
+      <button class="active" data-cover-device="desktop">Desktop</button>
+      <button data-cover-device="mobile">Phone</button>
+    </div>
+    <div class="v15-crop-grid">
+      <div>
+        <div class="crop-label">SELECT AREA</div>
+        <div id="cover-stage" class="v15-crop-stage">
+          <img id="cover-source">
+          <div id="cover-box" class="v15-crop-box"><span>VISIBLE AREA</span><i></i></div>
+        </div>
+      </div>
+      <div>
+        <div class="crop-label">LIVE COVER PREVIEW</div>
+        <div id="cover-preview" class="v15-cover-preview"><img id="cover-preview-image"></div>
+        <p class="mini-note">Move the box to frame the category cover. Phone and Desktop are saved separately.</p>
+      </div>
+    </div>
+    <div class="gallery-actions">
+      <button id="cover-reset" class="button">Reset</button>
+      <button id="cover-save" class="primary-btn">Save Cover Crop</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/images.js"></script>
+<script src="assets/js/api-config.js"></script>
+<script src="assets/js/portfolio-api.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cats=['sports','portraits','events','other'];
+
+const tokenEl=$('v15-token');
+tokenEl.value=sessionStorage.getItem('31action_admin_token')||'';
+const token=()=>String(tokenEl.value||'').trim().replace(/^Bearer\s+/i,'').trim();
+
+let view='home';
+let cloud=[],legacy=[],landing=[],recent=[],reels=[],athletes=[],pendingClaims=[],pendingAthleteRequests=[],accounts=[];
+let previewDevice='desktop';
+let homeSlideIndex=0;
+
+let batchIndex=0,batchDevice='desktop',batchCrop=null,batchDirty=false,batchDrag=null,batchFullPhoto=false;
+let coverTarget=null,coverDevice='desktop',coverState={},coverDrag=null;
+
+async function req(path,opt={}){
+  opt.headers=Object.assign({},opt.headers||{},token()?{Authorization:`Bearer ${token()}`}:{});
+  return ActionAPI.request(path,opt);
+}
+async function patchCloud(id,data){
+  return req('/api/admin/portfolio/'+encodeURIComponent(id),{
+    method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
+  });
+}
+async function saveLegacy(item,data){
+  return req('/api/admin/portfolio-legacy-settings',{
+    method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      source_path:item.source_path,filename:item.filename,original_category:item.original_category,
+      category:data.category??item.category,hidden:data.hidden??item.hidden,
+      is_cover:data.is_cover??item.is_cover,home_enabled:data.home_enabled??item.home_enabled,
+      sort_order:data.sort_order??item.sort_order,
+      crop_desktop:data.crop_desktop===undefined?item.crop_desktop:data.crop_desktop,
+      crop_mobile:data.crop_mobile===undefined?item.crop_mobile:data.crop_mobile,
+      cover_crop_desktop:data.cover_crop_desktop===undefined?item.cover_crop_desktop:data.cover_crop_desktop,
+      cover_crop_mobile:data.cover_crop_mobile===undefined?item.cover_crop_mobile:data.cover_crop_mobile
+    })
+  });
+}
+async function patchSlide(id,data){
+  return req('/api/admin/landing-slides/'+encodeURIComponent(id),{
+    method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)
+  });
+}
+
+function localItems(){
+  const map=new Map(legacy.map(x=>[String(x.source_path).replace(/\\/g,'/'),x]));
+  const out=[];
+  for(const original_category of cats){
+    (window.SITE_IMAGES?.[original_category]||[]).forEach((p,i)=>{
+      const source_path=String(p).replace(/\\/g,'/');
+      const s=map.get(source_path)||{};
+      out.push({
+        id:'local:'+source_path,local:true,source_path,src:source_path,
+        filename:source_path.split('/').pop(),original_category,
+        category:s.category||original_category,hidden:!!s.hidden,is_cover:!!s.is_cover,
+        home_enabled:!!s.home_enabled,sort_order:Number.isFinite(+s.sort_order)?+s.sort_order:i,
+        crop_desktop:s.crop_desktop||null,crop_mobile:s.crop_mobile||null,
+        cover_crop_desktop:s.cover_crop_desktop||null,cover_crop_mobile:s.cover_crop_mobile||null
+      });
+    });
+  }
+  return out;
+}
+function allPortfolio(){
+  return [
+    ...cloud.map(x=>({...x,local:false,src:ActionAPI.base()+x.preview_url})),
+    ...localItems()
+  ].filter(x=>!x.hidden&&x.status!=='archived');
+}
+function catItems(cat){
+  return allPortfolio().filter(x=>x.category===cat)
+    .sort((a,b)=>(b.is_cover?1:0)-(a.is_cover?1:0)||(+a.sort_order||0)-(+b.sort_order||0));
+}
+function slideSrc(s){
+  return s.source_kind==='static'?String(s.source_path||'').replace(/\\/g,'/'):
+    (s.preview_url?ActionAPI.base()+s.preview_url:'');
+}
+function activeSlides(){return landing.filter(x=>x.enabled)}
+function currentSlide(){
+  const a=activeSlides();
+  if(!a.length)return null;
+  homeSlideIndex=Math.max(0,Math.min(a.length-1,homeSlideIndex));
+  return a[homeSlideIndex];
+}
+
+async function syncLanding(){
+  const paths=(window.SITE_IMAGES?.landing||[]).map(x=>String(x).replace(/\\/g,'/'));
+  await req('/api/admin/landing-slides/sync',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({static_paths:paths})
+  });
+}
+async function load(renderNow=true){
+  const [p,l,ls,g,r,a,c,ar,ac]=await Promise.all([
+    req('/api/admin/portfolio'),
+    req('/api/admin/portfolio-legacy-settings'),
+    req('/api/admin/landing-slides'),
+    req('/api/admin/galleries'),
+    req('/api/admin/reels'),
+    req('/api/admin/athletes'),
+    req('/api/admin/photo-claims?status=pending'),
+    req('/api/admin/athlete-profile-requests?status=pending'),
+    req('/api/admin/accounts')
+  ]);
+  cloud=p.items||[];
+  legacy=l.items||[];
+  landing=(ls.slides||[]).slice().sort((a,b)=>(+a.sort_order||0)-(+b.sort_order||0));
+  recent=g.galleries||[];
+  reels=(r.reels||[]).slice().sort((a,b)=>(+a.sort_order||0)-(+b.sort_order||0));
+  athletes=a.athletes||[];
+  pendingClaims=c.claims||[];
+  pendingAthleteRequests=ar.requests||[];
+  accounts=ac.accounts||[];
+  $('v15-status').textContent='Connected';
+  if(renderNow)render();
+}
+
+$('v15-connect').onclick=async()=>{
+  try{await req('/api/admin/portfolio')}
+  catch(e){$('v15-status').textContent='Token not accepted';return}
+  sessionStorage.setItem('31action_admin_token',token());
+  $('v15-status').textContent='Connected — loading…';
+  try{await syncLanding();await load()}
+  catch(e){console.error(e);$('v15-status').textContent='Connected — API error: '+e.message}
+};
+
+document.querySelectorAll('#v15-tabs button').forEach(b=>b.onclick=()=>{
+  switchView(b.dataset.view);
+});
+function switchView(v){
+  view=v;
+  document.querySelectorAll('#v15-tabs button').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
+  render();
+}
+
+/* ---------- image upload helpers ---------- */
+function safeName(n){return String(n||'image.jpg').replace(/[^\w.\- ]+/g,'_')}
+async function imageBitmapFor(file){
+  if('createImageBitmap'in window)return createImageBitmap(file);
+  return new Promise((resolve,reject)=>{
+    const im=new Image(),u=URL.createObjectURL(file);
+    im.onload=()=>{URL.revokeObjectURL(u);resolve(im)};
+    im.onerror=reject;im.src=u;
+  });
+}
+async function makePreview(file,mode='none',max=2200,quality=.9){
+  const img=await imageBitmapFor(file);
+  const scale=Math.min(1,max/Math.max(img.width,img.height));
+  const w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const ctx=c.getContext('2d');ctx.drawImage(img,0,0,w,h);if(img.close)img.close();
+
+  function stamp(text,x,y,size,alpha,angle=0){
+    ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=`900 ${size}px Arial,sans-serif`;ctx.lineWidth=Math.max(1.5,size*.045);
+    ctx.strokeStyle=`rgba(0,0,0,${Math.min(.45,alpha+.1)})`;
+    ctx.fillStyle=`rgba(255,255,255,${alpha})`;ctx.strokeText(text,0,0);ctx.fillText(text,0,0);ctx.restore();
+  }
+  if(mode==='light'){
+    const sz=Math.max(22,Math.round(Math.min(w,h)*.045));
+    stamp('31 ACTION',w*.18,h*.10,sz,.26);stamp('PREVIEW',w*.82,h*.90,sz*.72,.24);
+  }else if(mode==='standard'){
+    const sz=Math.max(34,Math.round(Math.min(w,h)*.072));
+    stamp('31 ACTION · PREVIEW',w*.5,h*.47,sz,.25,-Math.PI/18);
+    stamp('31 ACTION',w*.82,h*.91,Math.max(20,Math.round(sz*.42)),.22);
+  }else if(mode==='strong'){
+    const sz=Math.max(26,Math.round(Math.min(w,h)*.048));
+    for(let r=0;r<4;r++)for(let col=0;col<3;col++){
+      const x=(col+.5)*w/3+(r%2?w/6:0);if(x>w*.97)continue;
+      stamp('31 ACTION · PREVIEW',x,(r+.55)*h/4,sz,.20,-Math.PI/8);
+    }
+  }
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',quality));
+  return {blob,width:w,height:h};
+}
+async function uploadPortfolioFiles(category,files,statusEl){
+  const list=[...files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name));
+  if(!list.length)return;
+  for(let i=0;i<list.length;i++){
+    const f=list[i],id=`pf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+    statusEl.textContent=`Uploading ${i+1} of ${list.length}: ${f.name}`;
+    const name=safeName(f.name);
+    const original=await req(`/api/admin/portfolio/${encodeURIComponent(id)}/original/${encodeURIComponent(name)}`,{
+      method:'PUT',headers:{'Content-Type':f.type||'image/jpeg'},body:f
+    });
+    const pv=await makePreview(f,'none',2400,.91);
+    const previewName=name.replace(/\.(png|webp)$/i,'.jpg');
+    const preview=await req(`/api/admin/portfolio/${encodeURIComponent(id)}/preview/${encodeURIComponent(previewName)}`,{
+      method:'PUT',headers:{'Content-Type':'image/jpeg'},body:pv.blob
+    });
+    await req('/api/admin/portfolio',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        id,category,filename:f.name,original_key:original.key,preview_key:preview.key,
+        sort_order:catItems(category).length+i
+      })
+    });
+  }
+  statusEl.textContent=`${list.length} photo${list.length===1?'':'s'} added to ${category}.`;
+  await load();
+}
+async function uploadGalleryFiles(galleryId,files,mode,statusEl){
+  const list=[...files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name));
+  if(!list.length)return;
+  const d=await req(`/api/admin/galleries/${encodeURIComponent(galleryId)}/photos`);
+  const start=(d.photos||[]).length;
+  for(let i=0;i<list.length;i++){
+    const f=list[i],name=safeName(f.name);
+    statusEl.textContent=`Uploading ${i+1} of ${list.length}: ${f.name}`;
+    const original=await req(`/api/admin/galleries/${encodeURIComponent(galleryId)}/original/${encodeURIComponent(name)}`,{
+      method:'PUT',headers:{'Content-Type':f.type||'image/jpeg'},body:f
+    });
+    const pv=await makePreview(f,mode,1800,.86);
+    const previewName=name.replace(/\.(png|webp)$/i,'.jpg');
+    const preview=await req(`/api/admin/galleries/${encodeURIComponent(galleryId)}/preview/${encodeURIComponent(previewName)}`,{
+      method:'PUT',headers:{'Content-Type':'image/jpeg'},body:pv.blob
+    });
+    await req('/api/admin/photos',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        gallery_id:galleryId,filename:f.name,original_key:original.key,preview_key:preview.key,
+        width:pv.width,height:pv.height,sort_order:start+i
+      })
+    });
+  }
+  statusEl.textContent=`${list.length} photo${list.length===1?'':'s'} added.`;
+  await load();
+}
+function wireDrop(zone,input,handler){
+  zone.onclick=e=>{if(e.target!==input)input.click()};
+  input.onchange=()=>handler(input.files);
+  ['dragenter','dragover'].forEach(t=>zone.addEventListener(t,e=>{e.preventDefault();zone.classList.add('drag')}));
+  ['dragleave','drop'].forEach(t=>zone.addEventListener(t,e=>{e.preventDefault();zone.classList.remove('drag')}));
+  zone.addEventListener('drop',e=>handler(e.dataTransfer.files));
+}
+
+/* ---------- render ---------- */
+function render(){
+  if(view==='home')return renderHome();
+  if(view==='landing')return renderLanding();
+  if(cats.includes(view))return renderCategory(view);
+  if(view==='reels')return renderReels();
+  if(view==='athletes')return renderAthletes();
+  if(view==='accounts')return renderAccounts();
+  if(view==='rosters')return renderRosters();
+  if(view==='reports')return renderReports();
+  if(view==='tags')return renderTags();
+  if(view==='recent')return renderRecent();
+}
+
+function renderHome(){
+  const main=$('v15-main'),slides=activeSlides(),s=currentSlide();
+  const covers=Object.fromEntries(cats.map(c=>[c,catItems(c)[0]]));
+  main.innerHTML=`
+  <section class="v15-section">
+    <div class="v15-section-head">
+      <div><div class="kicker">Live Layout Preview</div><h1>Homepage</h1>
+      <p>Step through the landing photos manually, recrop the current image, and switch between Desktop and Phone. Phone preview mirrors the new full-bleed public mobile hero.</p></div>
+      <div class="v15-preview-device">
+        <button class="${previewDevice==='desktop'?'active':''}" data-pdev="desktop">Desktop</button>
+        <button class="${previewDevice==='mobile'?'active':''}" data-pdev="mobile">Phone</button>
+      </div>
+    </div>
+
+    <div class="v15-preview-shell ${previewDevice==='mobile'?'phone':'desktop'}">
+      ${previewDevice==='mobile'?'<div class="v15-phone-notch"></div><div class="v15-phone-status"><span>9:41</span><span>● ● ●</span></div>':''}
+      <div class="v15-preview-header"><span class="mini-brand">31<span>ACTION</span></span><span>HOME &nbsp; PORTFOLIO &nbsp; RECENT EVENTS &nbsp; ABOUT &nbsp; CONTACT</span></div>
+      <div class="v15-preview-hero" id="home-preview-hero">
+        ${s?`<img id="home-preview-img" src="${esc(slideSrc(s))}">`:''}
+        <div class="v15-preview-logo">31 <span>ACTION</span><small>Life happens 24/7. Be ready for the shot.</small></div>
+        <div class="v15-preview-hero-controls">
+          <button id="home-prev" class="button">← Previous</button>
+          <span id="home-counter">${slides.length?homeSlideIndex+1:0} / ${slides.length}</span>
+          <button id="home-next" class="button">Next →</button>
+          <button id="home-recrop" class="primary-btn">Recrop Current</button>
+        </div>
+      </div>
+      <div class="v15-preview-categories home-purpose-preview">
+        ${[
+          ['sports','Portfolio'],
+          ['events','Recent Events'],
+          ['other','Work for Sale']
+        ].map(([c,label])=>`<article><div class="v15-preview-cover"><img id="home-cover-${c}" src="${covers[c]?.src||''}"></div><strong>${label}</strong><button class="button home-cover-edit" data-cat="${c}">Edit Photo / Crop</button></article>`).join('')}
+      </div>
+    </div>
+    <div class="mini-note v15-preview-file">${s?`${esc(s.filename)} · ${((+s.duration_ms||5200)/1000).toFixed(1)} sec`:''}</div>
+  </section>`;
+
+  main.querySelectorAll('[data-pdev]').forEach(b=>b.onclick=()=>{previewDevice=b.dataset.pdev;renderHome()});
+  $('home-prev').onclick=()=>{if(slides.length){homeSlideIndex=(homeSlideIndex-1+slides.length)%slides.length;renderHome()}};
+  $('home-next').onclick=()=>{if(slides.length){homeSlideIndex=(homeSlideIndex+1)%slides.length;renderHome()}};
+  $('home-recrop').onclick=()=>{if(!s)return;batchIndex=Math.max(0,landing.findIndex(x=>x.id===s.id));batchDevice=previewDevice;switchView('landing')};
+  main.querySelectorAll('.home-cover-edit').forEach(b=>b.onclick=()=>{const x=covers[b.dataset.cat];if(x)openCoverCrop(x,previewDevice)});
+
+  requestAnimationFrame(()=>{
+    if(s){
+      const crop=previewDevice==='mobile'?s.crop_mobile:s.crop_desktop;
+      const pc=crop||{x:0,y:0,w:100,h:100};
+      ActionPortfolio.renderCropInto($('home-preview-img'),{src:slideSrc(s)},pc,true).catch(()=>{});
+    }
+    for(const c of cats){
+      const x=covers[c],img=$('home-cover-'+c);
+      if(x&&img)ActionPortfolio.renderCropInto(img,x,ActionPortfolio.cropFor(x,'cover',previewDevice==='mobile'),true).catch(()=>{});
+    }
+  });
+}
+
+function renderLanding(){
+  const main=$('v15-main');
+  if(!landing.length){
+    main.innerHTML=`<section class="v15-section">
+      <div class="v15-section-head"><div><div class="kicker">Homepage</div><h1>Landing Slideshow</h1>
+      <p>No slideshow photos are loaded yet. Add individual photos here or use the existing site landing images.</p></div></div>
+      <div class="v153-landing-upload">
+        <label>New photo category
+          <select id="landing-upload-category">${cats.map(c=>`<option value="${c}">${c[0].toUpperCase()+c.slice(1)}</option>`).join('')}</select>
+        </label>
+        <div class="v15-drop" id="landing-drop"><input id="landing-files" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+          <strong>Drag individual photos into the Landing Slideshow</strong><span>or click to select files</span>
+        </div>
+        <div id="landing-upload-status" class="mini-note">Ready.</div>
+      </div>
+    </section>`;
+    wireLandingUpload();
+    return;
+  }
+
+  batchIndex=Math.max(0,Math.min(landing.length-1,batchIndex));
+  const s=landing[batchIndex],src=slideSrc(s);
+
+  main.innerHTML=`
+  <section class="v15-section v153-landing-editor">
+    <div class="v15-section-head">
+      <div><div class="kicker">Homepage Slideshow</div><h1>Landing Slideshow</h1>
+      <p>Each landing photo has independent Desktop and Phone crops. Saving one does not alter the other.</p></div>
+    </div>
+
+    <div class="v153-landing-upload compact">
+      <label>Add photo to category
+        <select id="landing-upload-category">${cats.map(c=>`<option value="${c}">${c[0].toUpperCase()+c.slice(1)}</option>`).join('')}</select>
+      </label>
+      <div class="v15-drop" id="landing-drop"><input id="landing-files" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+        <strong>Add individual photo(s) to Landing Slideshow</strong><span>Drag here or click to select</span>
+      </div>
+      <div id="landing-upload-status" class="mini-note">Ready.</div>
+    </div>
+
+    <div class="v15-batch-top">
+      <button id="batch-prev" class="button">← Previous Photo</button>
+      <div><strong>${batchIndex+1} of ${landing.length}</strong><span>${esc(s.filename)}</span></div>
+      <button id="batch-next" class="button">Next Photo →</button>
+    </div>
+
+    <div class="v153-dual-editor">
+      <section class="v153-device-panel desktop-panel">
+        <div class="v153-device-head">
+          <div><strong>DESKTOP</strong><span>Monitor / laptop landing crop</span></div>
+          <label><input id="exclude-desktop" type="checkbox" ${s.crop_desktop?.excluded?'checked':''}> Exclude on Desktop</label>
+        </div>
+
+        <div class="v153-source-stage desktop-stage" id="dual-desktop-stage">
+          <img id="dual-desktop-source" src="${esc(src)}">
+          <div id="dual-desktop-box" class="v153-crop-box"><span>DESKTOP VISIBLE AREA</span><i></i></div>
+        </div>
+
+        <div class="v153-device-preview desktop-preview">
+          <div class="v156-preview-heading">
+            <div class="crop-label">DESKTOP RESULT</div>
+            <label><input id="overlay-desktop" type="checkbox"> Show Text Overlay</label>
+          </div>
+          <div class="v153-preview-window desktop">
+            <img id="dual-desktop-preview" src="${esc(src)}">
+            <div id="desktop-overlay" class="v156-site-overlay desktop" hidden>
+              <div class="v156-overlay-logo">31 <span>ACTION</span></div>
+              <div class="v156-overlay-rule"></div>
+              <div class="v156-overlay-tagline">Life happens 24/7.<br>Be ready for the shot.</div>
+              <div class="v156-overlay-equation"><strong>24</strong> Hours a Day + <strong>7</strong> Days a Week = <strong>31 Action</strong></div>
+              <div class="v156-overlay-script">Photography by Scott Henry</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="v153-device-actions two">
+          <button id="reset-desktop" class="button">Reset Desktop</button>
+          <button id="full-desktop" class="button">Fit Entire Photo</button>
+        </div>
+        <div id="desktop-save-state" class="v153-save-state">Saved / unchanged</div>
+      </section>
+
+      <section class="v153-device-panel phone-panel">
+        <div class="v153-device-head">
+          <div><strong>PHONE</strong><span>Mobile landing crop</span></div>
+          <label><input id="exclude-phone" type="checkbox" ${s.crop_mobile?.excluded?'checked':''}> Exclude on Phone</label>
+        </div>
+
+        <div class="v153-phone-shell">
+          <div class="v153-phone-notch"></div>
+          <div id="dual-phone-stage" class="v153-phone-stage">
+            <img id="dual-phone-source" src="${esc(src)}">
+            <div class="v153-phone-label">DRAG PHOTO TO REPOSITION</div>
+          </div>
+        </div>
+
+        <div class="v154-framing-control">
+          <div class="v154-framing-labels">
+            <span>FIT ENTIRE PHOTO</span>
+            <span>FILL SCREEN</span>
+            <span>EXTRA ZOOM</span>
+          </div>
+          <input id="dual-phone-zoom" type="range" min="0" max="200" step="1" value="0">
+          <div class="v154-framing-value"><strong id="dual-phone-zoom-value">Fit</strong><span>Drag the photo to reposition it at any setting.</span></div>
+        </div>
+
+        <div class="v153-device-preview phone-preview">
+          <div class="v156-preview-heading">
+            <div class="crop-label">PHONE RESULT</div>
+            <label><input id="overlay-phone" type="checkbox"> Show Text Overlay</label>
+          </div>
+          <div class="v153-preview-window phone">
+            <img id="dual-phone-preview" src="${esc(src)}">
+            <div id="phone-overlay" class="v156-site-overlay phone" hidden>
+              <div class="v156-overlay-logo">31 <span>ACTION</span></div>
+              <div class="v156-overlay-rule"></div>
+              <div class="v156-overlay-tagline">Life happens 24/7.<br>Be ready for the shot.</div>
+              <div class="v156-overlay-equation"><strong>24</strong> Hours a Day + <strong>7</strong> Days a Week = <strong>31 Action</strong></div>
+              <div class="v156-overlay-script">Photography by Scott Henry</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="v153-device-actions two">
+          <button id="reset-phone" class="button">Reset Phone</button>
+          <button id="full-phone" class="button">Fit Entire Photo</button>
+        </div>
+        <div id="phone-save-state" class="v153-save-state">Saved / unchanged</div>
+      </section>
+    </div>
+
+    <div class="v156-save-both">
+      <div>
+        <strong>Save this landing photo</strong>
+        <span>Desktop crop + Desktop exclude + Phone crop + Phone exclude are saved together.</span>
+      </div>
+      <button id="save-both-devices" class="primary-btn">SAVE BOTH DEVICE CROPS</button>
+    </div>
+
+    <aside class="v153-slide-settings">
+      <label>Display Time
+        <select id="batch-duration">
+          ${[3000,4000,5000,6000,8000,10000,15000].map(ms=>`<option value="${ms}" ${Math.abs((+s.duration_ms||5200)-ms)<500?'selected':''}>${ms/1000} seconds</option>`).join('')}
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+      <label>Custom seconds <input id="batch-custom" type="number" min="1" max="60" step=".5" value="${((+s.duration_ms||5200)/1000).toFixed(1)}"></label>
+      <label><input id="batch-enabled" type="checkbox" ${s.enabled?'checked':''}> Include photo in slideshow</label>
+      <div class="v15-order-buttons"><button id="batch-earlier" class="button">↑ Earlier</button><button id="batch-later" class="button">↓ Later</button></div>
+    </aside>
+
+    <div class="v15-filmstrip">
+      ${landing.map((x,i)=>`<button class="${i===batchIndex?'active':''}" data-slide-index="${i}">
+        <img src="${esc(slideSrc(x))}"><span>${i+1}</span>
+      </button>`).join('')}
+    </div>
+  </section>`;
+
+  wireLandingUpload();
+  setupDualLandingEditor();
+}
+function targetAspect(device){return device==='mobile'?0.58:2.75}
+function defaultCrop(){return{x:0,y:0,w:100,h:100,excluded:false}}
+function getSlideCrop(s,device){return JSON.parse(JSON.stringify((device==='mobile'?s.crop_mobile:s.crop_desktop)||defaultCrop()))}
+function normalizeCrop(c,nw,nh,ratio){
+  let x=+c.x||0,y=+c.y||0,w=Math.max(8,+c.w||100),h=Math.max(8,+c.h||100);
+  const cx=x+w/2,cy=y+h/2;
+  let wantH=(nw*w)/(nh*ratio);
+  if(wantH<=100)h=wantH;
+  else{h=100;w=(nh*h*ratio)/nw}
+  w=Math.min(100,w);h=Math.min(100,h);
+  x=Math.max(0,Math.min(100-w,cx-w/2));y=Math.max(0,Math.min(100-h,cy-h/2));
+  return{x,y,w,h,excluded:!!c.excluded};
+}
+
+let dualDesktopCrop=defaultCrop(),dualPhoneCrop=defaultCrop();
+let dualDesktopDirty=false,dualPhoneDirty=false;
+let dualDesktopDrag=null,dualPhonePan=null;
+let dualPhoneState={zoom:1,focusX:50,focusY:50,fit:false};
+
+function wireLandingUpload(){
+  const zone=$('landing-drop'),input=$('landing-files'),status=$('landing-upload-status');
+  if(!zone||!input)return;
+  wireDrop(zone,input,async files=>{
+    try{
+      const cat=$('landing-upload-category')?.value||'other';
+      const before=new Set(cloud.map(x=>x.id));
+      await uploadPortfolioFiles(cat,files,status);
+      // uploadPortfolioFiles reloads data; add only newly uploaded cloud items to slideshow.
+      const added=cloud.filter(x=>!before.has(x.id));
+      for(const x of added){
+        await req('/api/admin/landing-slides/portfolio',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({portfolio_id:x.id})
+        });
+      }
+      status.textContent=`${added.length} photo${added.length===1?'':'s'} added to portfolio and landing slideshow.`;
+      await load(false);
+      if(added.length)batchIndex=Math.max(0,landing.length-added.length);
+      renderLanding();
+    }catch(e){status.textContent='Upload stopped: '+e.message}
+  });
+}
+
+function setupDualLandingEditor(){
+  const s=landing[batchIndex],src=slideSrc(s);
+  dualDesktopCrop=getSlideCrop(s,'desktop');
+  dualPhoneCrop=getSlideCrop(s,'mobile');
+  dualDesktopDirty=false;dualPhoneDirty=false;
+
+  const di=$('dual-desktop-source'),pi=$('dual-phone-source');
+
+  const desktopReady=()=>{
+    // IMPORTANT: do not normalize/rewrite saved crop. Just display it as saved.
+    renderDualDesktop();
+  };
+  const phoneReady=()=>{
+    initDualPhoneFromSaved();
+    renderDualPhone();
+  };
+  di.onload=desktopReady;pi.onload=phoneReady;
+  if(di.complete&&di.naturalWidth)desktopReady();
+  if(pi.complete&&pi.naturalWidth)phoneReady();
+
+  $('batch-prev').onclick=()=>{batchIndex=(batchIndex-1+landing.length)%landing.length;renderLanding()};
+  $('batch-next').onclick=()=>{batchIndex=(batchIndex+1)%landing.length;renderLanding()};
+  document.querySelectorAll('[data-slide-index]').forEach(b=>b.onclick=()=>{batchIndex=+b.dataset.slideIndex;renderLanding()});
+
+  $('batch-duration').onchange=async e=>{
+    if(e.target.value==='custom')return;
+    await patchSlide(s.id,{duration_ms:+e.target.value});await load(false);renderLanding()
+  };
+  $('batch-custom').onchange=async e=>{
+    await patchSlide(s.id,{duration_ms:Math.round(Math.max(1,Math.min(60,+e.target.value||5.2))*1000)});
+    await load(false);renderLanding()
+  };
+  $('batch-enabled').onchange=async e=>{await patchSlide(s.id,{enabled:e.target.checked});await load(false);renderLanding()};
+  $('batch-earlier').onclick=()=>moveDualSlide(batchIndex,-1);
+  $('batch-later').onclick=()=>moveDualSlide(batchIndex,1);
+
+  $('exclude-desktop').onchange=e=>{
+    dualDesktopCrop={...dualDesktopCrop,excluded:e.target.checked};dualDesktopDirty=true;renderDualDesktop();
+  };
+  $('exclude-phone').onchange=e=>{
+    dualPhoneCrop={...dualPhoneCrop,excluded:e.target.checked};dualPhoneDirty=true;renderDualPhone();
+  };
+
+  $('reset-desktop').onclick=()=>{
+    const img=$('dual-desktop-source');
+    dualDesktopCrop=normalizeCrop(defaultCrop(),img.naturalWidth||1,img.naturalHeight||1,targetAspect('desktop'));
+    dualDesktopDirty=true;renderDualDesktop()
+  };
+  $('full-desktop').onclick=()=>{dualDesktopCrop={...defaultCrop(),excluded:dualDesktopCrop.excluded};dualDesktopDirty=true;renderDualDesktop()};
+
+  $('reset-phone').onclick=()=>{
+    dualPhoneState={amount:100,focusX:50,focusY:50};
+    syncDualPhoneRect();
+    dualPhoneCrop.excluded=$('exclude-phone').checked;
+    dualPhoneDirty=true;renderDualPhone()
+  };
+  $('full-phone').onclick=()=>{
+    dualPhoneState={amount:0,focusX:50,focusY:50};
+    dualPhoneCrop={...defaultCrop(),excluded:$('exclude-phone').checked};
+    dualPhoneDirty=true;renderDualPhone()
+  };
+
+  $('overlay-desktop').onchange=e=>{
+    $('desktop-overlay').hidden=!e.target.checked;
+  };
+  $('overlay-phone').onchange=e=>{
+    $('phone-overlay').hidden=!e.target.checked;
+  };
+  $('save-both-devices').onclick=saveBothDeviceCrops;
+
+  setupDesktopCropDrag();
+  setupPhoneCropDragZoom();
+}
+
+function desktopImageRect(){
+  const stage=$('dual-desktop-stage'),img=$('dual-desktop-source'),r=stage.getBoundingClientRect();
+  const nw=img.naturalWidth||1,nh=img.naturalHeight||1,sc=Math.min(r.width/nw,r.height/nh),w=nw*sc,h=nh*sc;
+  return{left:(r.width-w)/2,top:(r.height-h)/2,width:w,height:h}
+}
+function desktopPct(e){
+  const sr=$('dual-desktop-stage').getBoundingClientRect(),r=desktopImageRect();
+  return{x:Math.max(0,Math.min(100,(e.clientX-sr.left-r.left)/r.width*100)),y:Math.max(0,Math.min(100,(e.clientY-sr.top-r.top)/r.height*100))}
+}
+function setupDesktopCropDrag(){
+  const box=$('dual-desktop-box');if(!box)return;
+  box.onpointerdown=e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    box.setPointerCapture?.(e.pointerId);
+    dualDesktopDrag={
+      resize:e.target.tagName==='I',
+      start:desktopPct(e),
+      orig:{...dualDesktopCrop},
+      pointerId:e.pointerId
+    };
+  };
+  box.onpointermove=e=>{
+    if(!dualDesktopDrag)return;
+    dualDesktopMove(e);
+  };
+  box.onpointerup=box.onpointercancel=e=>{
+    try{box.releasePointerCapture?.(e.pointerId)}catch(_){}
+    dualDesktopDrag=null;
+  };
+}
+function dualDesktopMove(e){
+  if(!dualDesktopDrag||view!=='landing')return;
+  const p=desktopPct(e),dx=p.x-dualDesktopDrag.start.x,dy=p.y-dualDesktopDrag.start.y,o=dualDesktopDrag.orig,n={...o};
+  if(dualDesktopDrag.resize){
+    const img=$('dual-desktop-source'),nw=img.naturalWidth||1,nh=img.naturalHeight||1,R=targetAspect('desktop');
+    let w=Math.max(8,Math.min(100-o.x,o.w+dx)),h=(nw*w)/(nh*R);
+    if(h>100-o.y){h=100-o.y;w=(nh*h*R)/nw}
+    n.w=w;n.h=h;
+  }else{
+    n.x=Math.max(0,Math.min(100-o.w,o.x+dx));n.y=Math.max(0,Math.min(100-o.h,o.y+dy));
+  }
+  dualDesktopCrop=n;dualDesktopDirty=true;renderDualDesktop();
+}
+function renderDualDesktop(){
+  const b=$('dual-desktop-box'),img=$('dual-desktop-source'),preview=$('dual-desktop-preview');
+  if(!b||!img)return;
+  const r=desktopImageRect(),c=dualDesktopCrop;
+  b.style.display=c.excluded?'none':'block';
+  b.style.left=(r.left+r.width*c.x/100)+'px';b.style.top=(r.top+r.height*c.y/100)+'px';
+  b.style.width=(r.width*c.w/100)+'px';b.style.height=(r.height*c.h/100)+'px';
+  $('desktop-save-state').textContent=dualDesktopDirty?'Unsaved Desktop changes':'Saved / unchanged';
+  if(c.excluded){preview.style.visibility='hidden'}
+  else{
+    preview.style.visibility='';
+    ActionPortfolio.renderCropInto(preview,{src:slideSrc(landing[batchIndex])},c,true).catch(()=>{});
+  }
+}
+function phoneCoverDimensions(){
+  const img=$('dual-phone-source');
+  const nw=img?.naturalWidth||1,nh=img?.naturalHeight||1;
+  const imageAspect=nw/nh;
+  const target=targetAspect('mobile');
+
+  // Source rectangle that exactly matches the phone viewport at "Fill".
+  if(imageAspect>target){
+    return {w:100*target/imageAspect,h:100};
+  }else{
+    return {w:100,h:100*imageAspect/target};
+  }
+}
+
+function inferPhoneFramingFromCrop(c){
+  const cover=phoneCoverDimensions();
+  const w=Math.max(1,+c.w||100),h=Math.max(1,+c.h||100);
+
+  if(w>=99 && h>=99)return 0;
+
+  // Before Fill: one dimension remains near 100 while the other moves
+  // continuously from 100 toward the exact-cover dimension.
+  if(cover.w<99 && h>=98){
+    const denom=Math.max(.001,100-cover.w);
+    return Math.max(0,Math.min(100,((100-w)/denom)*100));
+  }
+  if(cover.h<99 && w>=98){
+    const denom=Math.max(.001,100-cover.h);
+    return Math.max(0,Math.min(100,((100-h)/denom)*100));
+  }
+
+  // At/after Fill: crop keeps phone aspect and shrinks for extra zoom.
+  const zw=cover.w/w;
+  const zh=cover.h/h;
+  const z=Math.max(1,Math.min(2,Math.max(zw,zh)));
+  return Math.round(z*100);
+}
+
+function initDualPhoneFromSaved(){
+  const c=dualPhoneCrop||defaultCrop();
+  const focusX=Math.max(0,Math.min(100,(+c.x||0)+(+c.w||100)/2));
+  const focusY=Math.max(0,Math.min(100,(+c.y||0)+(+c.h||100)/2));
+  const amount=inferPhoneFramingFromCrop(c);
+
+  dualPhoneState={
+    amount,
+    focusX,
+    focusY
+  };
+
+  const slider=$('dual-phone-zoom');
+  if(slider)slider.value=String(amount);
+}
+
+function framingLabel(amount){
+  amount=+amount||0;
+  if(amount<=2)return 'Fit entire photo';
+  if(amount<98)return `${Math.round(amount)}% toward Fill`;
+  if(amount<=102)return 'Fill screen';
+  return `${(amount/100).toFixed(2)}× beyond Fill`;
+}
+
+function syncDualPhoneRect(){
+  const cover=phoneCoverDimensions();
+  const amount=Math.max(0,Math.min(200,+dualPhoneState.amount||0));
+
+  let w,h;
+
+  if(amount<=100){
+    // Continuous interpolation from the complete image (100 x 100)
+    // to the exact phone-aspect crop. This is what removes the old jump.
+    const t=amount/100;
+    w=100+(cover.w-100)*t;
+    h=100+(cover.h-100)*t;
+  }else{
+    // Beyond Fill, preserve phone aspect and zoom further.
+    const factor=amount/100;  // 1.00 at Fill, 2.00 at far-right
+    w=cover.w/factor;
+    h=cover.h/factor;
+  }
+
+  w=Math.max(3,Math.min(100,w));
+  h=Math.max(3,Math.min(100,h));
+
+  const x=Math.max(0,Math.min(100-w,dualPhoneState.focusX-w/2));
+  const y=Math.max(0,Math.min(100-h,dualPhoneState.focusY-h/2));
+
+  dualPhoneCrop={
+    x,y,w,h,
+    excluded:dualPhoneCrop.excluded
+  };
+}
+
+function setupPhoneCropDragZoom(){
+  const stage=$('dual-phone-stage'),slider=$('dual-phone-zoom');
+  if(!stage||!slider)return;
+
+  slider.value=String(dualPhoneState.amount||0);
+  $('dual-phone-zoom-value').textContent=framingLabel(slider.value);
+
+  slider.oninput=()=>{
+    dualPhoneState.amount=+slider.value;
+    syncDualPhoneRect();
+    dualPhoneDirty=true;
+    renderDualPhone();
+  };
+
+  stage.onpointerdown=e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    stage.setPointerCapture?.(e.pointerId);
+    dualPhonePan={
+      x:e.clientX,y:e.clientY,
+      focusX:dualPhoneState.focusX,
+      focusY:dualPhoneState.focusY
+    };
+  };
+
+  stage.onpointermove=e=>{
+    if(!dualPhonePan)return;
+    const r=stage.getBoundingClientRect();
+    const dx=(e.clientX-dualPhonePan.x)/Math.max(1,r.width)*100;
+    const dy=(e.clientY-dualPhonePan.y)/Math.max(1,r.height)*100;
+
+    dualPhoneState.focusX=Math.max(0,Math.min(100,dualPhonePan.focusX-dx));
+    dualPhoneState.focusY=Math.max(0,Math.min(100,dualPhonePan.focusY-dy));
+
+    syncDualPhoneRect();
+    dualPhoneDirty=true;
+    renderDualPhone();
+  };
+
+  stage.onpointerup=stage.onpointercancel=()=>dualPhonePan=null;
+}
+
+function renderDualPhone(){
+  const source=$('dual-phone-source'),preview=$('dual-phone-preview'),c=dualPhoneCrop;
+  if(!source)return;
+
+  const slider=$('dual-phone-zoom');
+  if(slider){
+    slider.value=String(dualPhoneState.amount||0);
+    $('dual-phone-zoom-value').textContent=framingLabel(slider.value);
+  }
+
+  $('phone-save-state').textContent=dualPhoneDirty?'Unsaved Phone changes':'Saved / unchanged';
+
+  if(c.excluded){
+    source.style.visibility='hidden';
+    preview.style.visibility='hidden';
+  }else{
+    source.style.visibility='';
+    preview.style.visibility='';
+
+    // ALWAYS contain the selected source rectangle. This lets the slider
+    // smoothly retain some black bars between Fit and Fill.
+    ActionPortfolio.renderCropInto(
+      source,
+      {src:slideSrc(landing[batchIndex])},
+      c,
+      true
+    ).catch(()=>{});
+
+    ActionPortfolio.renderCropInto(
+      preview,
+      {src:slideSrc(landing[batchIndex])},
+      c,
+      true
+    ).catch(()=>{});
+  }
+}
+
+async function saveBothDeviceCrops(){
+  const s=landing[batchIndex];
+  const btn=$('save-both-devices');
+  const old=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='SAVING BOTH…';
+  try{
+    await patchSlide(s.id,{
+      crop_desktop:dualDesktopCrop,
+      crop_mobile:dualPhoneCrop
+    });
+    dualDesktopDirty=false;
+    dualPhoneDirty=false;
+    $('desktop-save-state').textContent='Desktop saved';
+    $('phone-save-state').textContent='Phone saved';
+    btn.textContent='SAVED BOTH ✓';
+    await load(false);
+    setTimeout(()=>{
+      if(btn){
+        btn.disabled=false;
+        btn.textContent=old;
+      }
+    },1000);
+  }catch(e){
+    btn.disabled=false;
+    btn.textContent=old;
+    alert('Could not save crops: '+e.message);
+  }
+}
+async function moveDualSlide(i,dir){
+  const j=i+dir;if(j<0||j>=landing.length)return;
+  [landing[i],landing[j]]=[landing[j],landing[i]];
+  for(let k=0;k<landing.length;k++)await patchSlide(landing[k].id,{sort_order:k*10});
+  batchIndex=j;await load(false);renderLanding();
+}
+
+function renderCategory(cat){
+  const main=$('v15-main'),items=catItems(cat);
+  main.innerHTML=`
+  <section class="v15-section">
+    <div class="v15-section-head">
+      <div><div class="kicker">Portfolio Gallery</div><h1>${cat.toUpperCase()}</h1>
+      <p>Add photos directly while you are looking at the gallery. The main Admin folder uploader remains available for full Recent Shoots.</p></div>
+    </div>
+
+    <div class="v15-inline-upload">
+      <div class="v15-drop" id="cat-drop"><input id="cat-files" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+        <strong>Drag photos directly into ${cat.toUpperCase()}</strong><span>or click to select JPG / PNG / WEBP files</span>
+      </div>
+      <div id="cat-upload-status" class="mini-note">Ready.</div>
+    </div>
+
+    <div class="v15-photo-grid">
+      ${items.map(x=>`<article class="v15-photo-card" data-id="${esc(x.id)}">
+        <img src="${esc(x.src)}"><strong>${esc(x.filename)}</strong>
+        <label>Gallery<select class="pc-cat">${cats.map(c=>`<option value="${c}" ${c===x.category?'selected':''}>${c[0].toUpperCase()+c.slice(1)}</option>`).join('')}</select></label>
+        <label><input class="pc-cover" type="checkbox" ${x.is_cover?'checked':''}> Cover Photo</label>
+        <div class="v15-card-buttons"><button class="button pc-covercrop">Crop Cover</button><button class="button pc-addslide">Add to Slideshow</button></div>
+        <label><input class="pc-deletecheck" type="checkbox"> Confirm remove</label>
+        <button class="button danger pc-delete">${x.local?'Remove from Site':'Delete Photo'}</button>
+      </article>`).join('')}
+    </div>
+  </section>`;
+  const zone=$('cat-drop'),input=$('cat-files'),status=$('cat-upload-status');
+  wireDrop(zone,input,async files=>{try{await uploadPortfolioFiles(cat,files,status)}catch(e){status.textContent='Upload stopped: '+e.message}});
+  main.querySelectorAll('.v15-photo-card').forEach(card=>{
+    const x=items.find(i=>i.id===card.dataset.id);if(!x)return;
+    card.querySelector('.pc-cat').onchange=async e=>{x.local?await saveLegacy(x,{category:e.target.value}):await patchCloud(x.id,{category:e.target.value});await load()};
+    card.querySelector('.pc-cover').onchange=async e=>{if(!e.target.checked)return;x.local?await saveLegacy(x,{is_cover:true}):await patchCloud(x.id,{is_cover:true});await load()};
+    card.querySelector('.pc-covercrop').onclick=()=>openCoverCrop(x,'desktop');
+    card.querySelector('.pc-addslide').onclick=async()=>{
+      if(x.local){alert('Built-in gallery images can still be used as landing images through the existing landing set. Uploaded portfolio photos can be added directly here.');return}
+      await req('/api/admin/landing-slides/portfolio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({portfolio_id:x.id})});
+      await load();alert('Added to Landing Slideshow.');
+    };
+    card.querySelector('.pc-delete').onclick=async()=>{
+      if(!card.querySelector('.pc-deletecheck').checked)return alert('Check Confirm remove first.');
+      if(x.local)await saveLegacy(x,{hidden:true,is_cover:false});
+      else await req('/api/admin/portfolio/'+encodeURIComponent(x.id),{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:'DELETE'})});
+      await load();
+    };
+  });
+}
+
+
+async function makeReelPoster(file){
+  const url=URL.createObjectURL(file);
+  try{
+    const video=document.createElement('video');
+    video.muted=true;video.playsInline=true;video.preload='metadata';
+    await new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error('Poster frame timed out')),10000);
+      video.onloadedmetadata=()=>{
+        clearTimeout(timer);
+        try{video.currentTime=Math.min(.5,Math.max(.01,(video.duration||1)*.05))}catch(_){resolve()}
+      };
+      video.onseeked=resolve;
+      video.onerror=()=>reject(new Error('Browser could not preview this video'));
+      video.src=url;
+    });
+    const w=video.videoWidth||720,h=video.videoHeight||1280;
+    const max=1200,scale=Math.min(1,max/Math.max(w,h));
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));
+    c.getContext('2d').drawImage(video,0,0,c.width,c.height);
+    return await new Promise(resolve=>c.toBlob(resolve,'image/jpeg',.88));
+  }finally{URL.revokeObjectURL(url)}
+}
+async function uploadReels(files,status){
+  const list=[...files].filter(f=>['video/mp4','video/webm'].includes(f.type)||/\.(mp4|webm)$/i.test(f.name));
+  if(!list.length){status.textContent='Select MP4 or WebM video files.';return}
+  const sport=$('reel-upload-sport')?.value||'';
+  const team=$('reel-upload-team')?.value||'';
+  const eventLabel=$('reel-upload-event')?.value||'';
+  const related=$('reel-upload-gallery')?.value||'';
+  for(let i=0;i<list.length;i++){
+    const f=list[i];
+    const id=`reel-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
+    const filename=safeName(f.name);
+    status.textContent=`Uploading reel ${i+1} of ${list.length}: ${f.name}`;
+    const videoRes=await req(`/api/admin/reels/${encodeURIComponent(id)}/video/${encodeURIComponent(filename)}`,{
+      method:'PUT',headers:{'Content-Type':f.type||'video/mp4'},body:f
+    });
+    let posterKey=null;
+    try{
+      status.textContent=`Creating poster frame: ${f.name}`;
+      const poster=await makeReelPoster(f);
+      if(poster){
+        const posterName=filename.replace(/\.(mp4|webm)$/i,'-poster.jpg');
+        const pr=await req(`/api/admin/reels/${encodeURIComponent(id)}/poster/${encodeURIComponent(posterName)}`,{
+          method:'PUT',headers:{'Content-Type':'image/jpeg'},body:poster
+        });
+        posterKey=pr.key;
+      }
+    }catch(e){console.warn('Poster frame skipped',e)}
+    await req('/api/admin/reels',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        id,
+        title:f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' '),
+        filename:f.name,
+        video_key:videoRes.key,
+        poster_key:posterKey,
+        sort_order:reels.length+i,
+        sport,team,event_label:eventLabel,
+        related_gallery_id:related||null
+      })
+    });
+  }
+  status.textContent=`${list.length} reel${list.length===1?'':'s'} uploaded.`;
+  await load();
+}
+function renderReels(){
+  const main=$('v15-main');
+  const galleryOptions=recent.map(g=>`<option value="${esc(g.id)}">${esc(g.title)}</option>`).join('');
+  main.innerHTML=`
+  <section class="v15-section">
+    <div class="v15-section-head">
+      <div><div class="kicker">Marketing / Short-Form Video</div><h1>Reels</h1>
+      <p>Reels are marketing content only. They do not appear in the cart or print/digital purchasing system.</p></div>
+      <a class="button" href="reels.html" target="_blank">View Public Reels Page</a>
+    </div>
+
+    <div class="v16-reel-upload">
+      <div class="v16-reel-fields">
+        <label>Sport <input id="reel-upload-sport" placeholder="Baseball"></label>
+        <label>Team <input id="reel-upload-team" placeholder="Team name"></label>
+        <label>Event / Game <input id="reel-upload-event" placeholder="Game or event label"></label>
+        <label>Related Recent Shoot
+          <select id="reel-upload-gallery"><option value="">None</option>${galleryOptions}</select>
+        </label>
+      </div>
+      <div class="v15-drop" id="reel-drop">
+        <input id="reel-files" type="file" accept="video/mp4,video/webm,.mp4,.webm" multiple>
+        <strong>Drag Reels Here</strong>
+        <span>or click to select MP4 / WebM files</span>
+      </div>
+      <div id="reel-upload-status" class="mini-note">Ready. Short web-ready MP4 files are recommended.</div>
+    </div>
+
+    <div class="v16-reel-grid">
+      ${reels.map((r,i)=>`<article class="v16-reel-card" data-id="${esc(r.id)}">
+        <div class="v16-reel-media">
+          <video controls playsinline preload="metadata" ${r.poster_url?`poster="${esc(ActionAPI.base()+r.poster_url)}"`:''}>
+            <source src="${esc(ActionAPI.base()+r.video_url)}">
+          </video>
+        </div>
+        <label>Title <input class="re-title" value="${esc(r.title||'')}"></label>
+        <label>Caption <textarea class="re-caption" rows="3">${esc(r.caption||'')}</textarea></label>
+        <div class="v16-reel-two">
+          <label>Sport <input class="re-sport" value="${esc(r.sport||'')}"></label>
+          <label>Team <input class="re-team" value="${esc(r.team||'')}"></label>
+        </div>
+        <label>Event / Game <input class="re-event" value="${esc(r.event_label||'')}"></label>
+        <label>Related Recent Shoot
+          <select class="re-gallery"><option value="">None</option>
+            ${recent.map(g=>`<option value="${esc(g.id)}" ${g.id===r.related_gallery_id?'selected':''}>${esc(g.title)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="v15-inline-check"><input class="re-visible" type="checkbox" ${r.status==='active'?'checked':''}> Show publicly</label>
+        <div class="v16-reel-actions">
+          <button class="button re-earlier" ${i===0?'disabled':''}>← Earlier</button>
+          <button class="button re-later" ${i===reels.length-1?'disabled':''}>Later →</button>
+          <button class="primary-btn re-save">Save</button>
+        </div>
+        <label><input class="re-delete-check" type="checkbox"> Confirm delete</label>
+        <button class="button danger re-delete">Delete Reel</button>
+      </article>`).join('')}
+    </div>
+  </section>`;
+
+  const zone=$('reel-drop'),input=$('reel-files'),status=$('reel-upload-status');
+  wireDrop(zone,input,async files=>{
+    try{await uploadReels(files,status)}
+    catch(e){console.error(e);status.textContent='Upload stopped: '+e.message}
+  });
+
+  main.querySelectorAll('.v16-reel-card').forEach((card,index)=>{
+    const r=reels.find(x=>x.id===card.dataset.id);if(!r)return;
+    card.querySelector('.re-save').onclick=async()=>{
+      const btn=card.querySelector('.re-save'),old=btn.textContent;
+      btn.disabled=true;btn.textContent='Saving…';
+      try{
+        await req('/api/admin/reels/'+encodeURIComponent(r.id),{
+          method:'PATCH',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            title:card.querySelector('.re-title').value,
+            caption:card.querySelector('.re-caption').value,
+            sport:card.querySelector('.re-sport').value,
+            team:card.querySelector('.re-team').value,
+            event_label:card.querySelector('.re-event').value,
+            related_gallery_id:card.querySelector('.re-gallery').value||null,
+            status:card.querySelector('.re-visible').checked?'active':'hidden'
+          })
+        });
+        btn.textContent='Saved ✓';await load(false);
+        setTimeout(()=>{btn.disabled=false;btn.textContent=old},900);
+      }catch(e){btn.disabled=false;btn.textContent=old;alert(e.message)}
+    };
+    card.querySelector('.re-earlier').onclick=()=>moveReel(index,-1);
+    card.querySelector('.re-later').onclick=()=>moveReel(index,1);
+    card.querySelector('.re-delete').onclick=async()=>{
+      if(!card.querySelector('.re-delete-check').checked)return alert('Check Confirm delete first.');
+      if(!confirm('Permanently delete this reel and its uploaded video?'))return;
+      await req('/api/admin/reels/'+encodeURIComponent(r.id),{
+        method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:'DELETE'})
+      });
+      await load();
+    };
+  });
+}
+async function moveReel(i,dir){
+  const j=i+dir;if(j<0||j>=reels.length)return;
+  [reels[i],reels[j]]=[reels[j],reels[i]];
+  for(let k=0;k<reels.length;k++){
+    await req('/api/admin/reels/'+encodeURIComponent(reels[k].id),{
+      method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({sort_order:k*10})
+    });
+  }
+  await load(false);renderReels();
+}
+
+
+function renderAthletes(){
+  const main=$('v15-main');
+  main.innerHTML=`
+  <section class="v15-section">
+    <div class="v15-section-head">
+      <div><div class="kicker">Verified Athlete Identity</div><h1>Athletes</h1>
+      <p>Create verified athlete profiles, track sport/team memberships and multiple jersey numbers, and review photo claims. The “All Photos of Me” package will later use only approved photo/person links within one event.</p></div>
+    </div>
+
+    <div class="v17-athlete-create">
+      <div class="v17-athlete-create-fields">
+        <label>Email <input id="ath-email" type="email" placeholder="player@email.com"></label>
+        <label>Player Name <input id="ath-name" placeholder="Player name"></label>
+        <label>Sport <input id="ath-sport" placeholder="Baseball"></label>
+        <label>Team <input id="ath-team" placeholder="Team name"></label>
+        <label>Jersey numbers <input id="ath-jerseys" placeholder="7, 17, 23"></label>
+      </div>
+      <button id="ath-create" class="primary-btn">Create Verified Athlete</button>
+      <div id="ath-create-status" class="mini-note">This creates an admin-verified athlete record. Player self-registration/login will come later.</div>
+    </div>
+
+    <div class="v17-athlete-grid">
+      ${athletes.map(a=>`
+        <article class="v17-athlete-card" data-athlete="${esc(a.id)}">
+          <div class="v17-athlete-head">
+            <div><strong>${esc(a.player_name)}</strong><span>${esc(a.email||'')}</span></div>
+            <span class="v17-badge ${a.verification_status==='verified'?'ok':''}">${esc(a.verification_status)}</span>
+          </div>
+
+          <div class="v17-memberships">
+            ${(a.memberships||[]).map(m=>`
+              <div class="v17-membership">
+                <strong>${esc(m.sport)}</strong>
+                <span>${esc(m.team||'No team')}</span>
+                <div class="v17-jerseys">${(m.jersey_numbers||[]).map(j=>`<b>#${esc(j.jersey_number)}</b>`).join('')||'<em>No jersey numbers</em>'}</div>
+                <div class="v17-add-jersey">
+                  <input class="ath-new-jersey" data-membership="${esc(m.id)}" placeholder="Add #">
+                  <button class="button ath-add-jersey" data-membership="${esc(m.id)}">Add</button>
+                </div>
+              </div>`).join('')||'<div class="empty-state small">No sport/team memberships yet.</div>'}
+          </div>
+
+          <div class="v17-add-membership">
+            <input class="ath-new-sport" placeholder="Sport">
+            <input class="ath-new-team" placeholder="Team">
+            <button class="button ath-add-membership">Add Sport/Team</button>
+          </div>
+        </article>`).join('')||'<div class="empty-state">No athlete profiles yet.</div>'}
+    </div>
+
+    <section class="v17-claims">
+      <div class="v15-section-head compact">
+        <div><div class="kicker">New Accounts</div><h2>Pending Athlete Profile Requests</h2>
+        <p>Creating an account does not verify an athlete. Approve only when you are satisfied the identity information is legitimate.</p></div>
+      </div>
+      <div class="v17-claim-list">
+        ${pendingAthleteRequests.map(r=>`
+          <article class="v17-claim-card" data-ath-request="${esc(r.id)}">
+            <div><strong>${esc(r.requested_player_name)}</strong><span>${esc(r.email)}</span>
+            <small>${[r.requested_sport,r.requested_team,(r.requested_jersey_numbers||[]).length?'#'+r.requested_jersey_numbers.join(', #'):''].filter(Boolean).map(esc).join(' · ')}</small></div>
+            <textarea class="ath-request-note" placeholder="Optional review note"></textarea>
+            <div class="v17-claim-actions"><button class="primary-btn ath-request-approve">Approve</button><button class="button danger ath-request-reject">Reject</button></div>
+          </article>`).join('')||'<div class="empty-state small">No pending athlete profile requests.</div>'}
+      </div>
+    </section>
+
+    <section class="v17-claims">
+      <div class="v15-section-head compact">
+        <div><div class="kicker">Photo Claims</div><h2>Pending Verification</h2>
+        <p>Claims will appear here once player self-service is enabled. Approved claims become verified photo/person links.</p></div>
+      </div>
+      <div class="v17-claim-list">
+        ${pendingClaims.map(c=>`
+          <article class="v17-claim-card" data-claim="${esc(c.id)}">
+            <div>
+              <strong>${esc(c.player_name)}</strong>
+              <span>${esc(c.gallery_title)} · ${esc(c.filename)}</span>
+              <small>${[c.sport,c.team,c.jersey_number?('#'+c.jersey_number):''].filter(Boolean).map(esc).join(' · ')}</small>
+            </div>
+            <textarea class="claim-note" placeholder="Optional review note"></textarea>
+            <div class="v17-claim-actions">
+              <button class="primary-btn claim-approve">Approve</button>
+              <button class="button danger claim-reject">Reject</button>
+            </div>
+          </article>`).join('')||'<div class="empty-state small">No pending claims.</div>'}
+      </div>
+    </section>
+  </section>`;
+
+  $('ath-create').onclick=async()=>{
+    const status=$('ath-create-status');
+    const email=$('ath-email').value.trim(),name=$('ath-name').value.trim();
+    const sport=$('ath-sport').value.trim(),team=$('ath-team').value.trim();
+    const jerseys=$('ath-jerseys').value.split(',').map(x=>x.trim()).filter(Boolean);
+    if(!email||!name)return status.textContent='Email and Player Name are required.';
+    try{
+      status.textContent='Creating athlete…';
+      const created=await req('/api/admin/athletes',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email,player_name:name,display_name:name})
+      });
+      if(sport){
+        const m=await req(`/api/admin/athletes/${encodeURIComponent(created.athlete_id)}/memberships`,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({sport,team})
+        });
+        if(jerseys.length){
+          await req(`/api/admin/athlete-memberships/${encodeURIComponent(m.id)}/jerseys`,{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({jersey_numbers:jerseys})
+          });
+        }
+      }
+      status.textContent='Athlete created.';
+      await load();
+    }catch(e){status.textContent='Could not create athlete: '+e.message}
+  };
+
+  main.querySelectorAll('.ath-add-membership').forEach(btn=>btn.onclick=async()=>{
+    const card=btn.closest('.v17-athlete-card');
+    const athleteId=card.dataset.athlete;
+    const sport=card.querySelector('.ath-new-sport').value.trim();
+    const team=card.querySelector('.ath-new-team').value.trim();
+    if(!sport)return alert('Enter a sport.');
+    await req(`/api/admin/athletes/${encodeURIComponent(athleteId)}/memberships`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sport,team})
+    });
+    await load();
+  });
+
+  main.querySelectorAll('.ath-add-jersey').forEach(btn=>btn.onclick=async()=>{
+    const membership=btn.dataset.membership;
+    const input=main.querySelector(`.ath-new-jersey[data-membership="${CSS.escape(membership)}"]`);
+    const number=input.value.trim();
+    if(!number)return;
+    await req(`/api/admin/athlete-memberships/${encodeURIComponent(membership)}/jerseys`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jersey_number:number})
+    });
+    await load();
+  });
+
+  main.querySelectorAll('[data-claim]').forEach(card=>{
+    const id=card.dataset.claim;
+    card.querySelector('.claim-approve').onclick=()=>reviewClaim(id,'approve',card);
+    card.querySelector('.claim-reject').onclick=()=>reviewClaim(id,'reject',card);
+  });
+  main.querySelectorAll('[data-ath-request]').forEach(card=>{
+    const id=card.dataset.athRequest;
+    card.querySelector('.ath-request-approve').onclick=()=>reviewAthleteRequest(id,'approve',card);
+    card.querySelector('.ath-request-reject').onclick=()=>reviewAthleteRequest(id,'reject',card);
+  });
+}
+
+async function reviewAthleteRequest(id,action,card){
+  const note=card.querySelector('.ath-request-note').value.trim();
+  try{
+    await req(`/api/admin/athlete-profile-requests/${encodeURIComponent(id)}/${action}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({review_note:note})
+    });
+    await load();
+  }catch(e){alert(e.message)}
+}
+
+async function reviewClaim(id,action,card){
+  const note=card.querySelector('.claim-note').value.trim();
+  try{
+    await req(`/api/admin/photo-claims/${encodeURIComponent(id)}/${action}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({review_note:note})
+    });
+    await load();
+  }catch(e){alert(e.message)}
+}
+
+
+
+
+
+async function loadPendingPlayerTags(){
+  const box=$('pending-player-tags');if(!box)return;
+  box.innerHTML='<span class="mini-note">Loading…</span>';
+  try{
+    const d=await req('/api/admin/player-tag-suggestions-v15?status=pending');
+    const rows=d.suggestions||[];
+    box.innerHTML=rows.length?rows.map(s=>`
+      <article class="v21-pending-tag-row" data-suggestion="${esc(s.id)}">
+        ${s.preview_key?`<img src="${api+'/api/preview/'+encodeURIComponent(s.preview_key)}" alt="">`:''}
+        <div><strong>${esc(s.suggested_name)}</strong>
+        <span>${esc([s.suggested_school,s.suggested_sport,s.suggested_team,s.suggested_jersey_number?`#${s.suggested_jersey_number}`:''].filter(Boolean).join(' · '))}</span>
+        <small>${esc(s.gallery_title||'')} · ${esc(s.filename||'')}</small></div>
+        <button class="primary-btn approve-player-tag">Approve</button>
+        <button class="button danger reject-player-tag">Reject</button>
+      </article>`).join(''):'<div class="empty-state small">No pending player tags.</div>';
+    box.querySelectorAll('.approve-player-tag').forEach(b=>b.onclick=()=>reviewPlayerTag(b.closest('[data-suggestion]').dataset.suggestion,'approve'));
+    box.querySelectorAll('.reject-player-tag').forEach(b=>b.onclick=()=>reviewPlayerTag(b.closest('[data-suggestion]').dataset.suggestion,'reject'));
+  }catch(e){box.innerHTML=`<span class="mini-note">${esc(e.message)}</span>`}
+}
+async function reviewPlayerTag(id,action){
+  try{await req(`/api/admin/player-tag-suggestions-v15/${encodeURIComponent(id)}/${action}`,{method:'POST'});await loadPendingPlayerTags()}
+  catch(e){alert(e.message)}
+}
+function accountStatusLabel(a){
+  if(a.account_status==='suspended') return 'Suspended';
+  if(a.account_status==='verified') return 'Active';
+  if(a.account_status==='pending') return 'Pending';
+  return a.account_status||'Unknown';
+}
+
+function renderAccounts(){
+  const main=$('v15-main');
+  main.innerHTML=`
+  <section class="v15-section">
+    <div class="v15-section-head"><div><div class="kicker">PLAYER / CLIENT ACCOUNTS</div><h1>Accounts / Clients</h1>
+      <p>Manage account access, client gallery permissions, and account status. Delete is blocked when purchase history exists.</p></div>
+    </div>
+    <section class="v21-pending-tags">
+      <div class="v21-subhead"><div><div class="kicker">TAG VERIFICATION</div><h2>Pending Player Tags</h2></div>
+      <button id="refresh-player-tags" class="button">Refresh</button></div>
+      <div id="pending-player-tags"><span class="mini-note">Loading…</span></div>
+    </section>
+    <div class="v20-account-tools">
+      <input id="account-filter" placeholder="Filter by name or email">
+      <span>${accounts.length} account${accounts.length===1?'':'s'}</span>
+    </div>
+    <div id="v20-account-list" class="v19-account-list">
+      ${accounts.map(a=>accountCardHtml(a)).join('')||'<div class="empty-state">No accounts yet.</div>'}
+    </div>
+  </section>`;
+
+  $('account-filter').addEventListener('input',e=>{
+    const q=e.target.value.trim().toLowerCase();
+    main.querySelectorAll('.v19-account-card').forEach(card=>{
+      card.hidden=q && !card.dataset.search.includes(q);
+    });
+  });
+
+  wireAccountCards(main);
+  loadPendingPlayerTags();
+  $('refresh-player-tags')?.addEventListener('click',loadPendingPlayerTags);
+}
+
+function accountCardHtml(a){
+  const search=`${a.display_name||''} ${a.email||''} ${(a.roles||[]).join(' ')}`.toLowerCase();
+  const suspended=a.account_status==='suspended';
+  return `
+    <article class="v19-account-card ${suspended?'is-suspended':''}" data-user="${esc(a.id)}" data-search="${esc(search)}">
+      <div class="v19-account-head">
+        <div>
+          <strong>${esc(a.display_name||a.email)}</strong>
+          <span>${esc(a.email)}</span>
+          <span class="v20-account-status">${esc(accountStatusLabel(a))}</span>
+        </div>
+        <div class="v19-role-chips">${(a.roles||[]).map(r=>`<b>${esc(r)}</b>`).join('')||'<b>unassigned</b>'}</div>
+      </div>
+
+      <div class="v20-account-actions">
+        ${suspended
+          ? '<button class="button account-reactivate">Reactivate</button>'
+          : '<button class="button account-deactivate">Deactivate</button>'}
+        <button class="button danger account-delete">Delete Account</button>
+      </div>
+
+      <div class="v19-grant-grid">
+        <select class="client-gallery-select">
+          <option value="">Choose gallery…</option>
+          ${recent.map(g=>`<option value="${esc(g.id)}">${esc(g.title)}</option>`).join('')}
+        </select>
+        <label><input type="checkbox" class="client-download" checked> All digitals</label>
+        <label><input type="checkbox" class="client-prints" checked> Print ordering</label>
+        <button class="primary-btn grant-client-access">Grant Access</button>
+      </div>
+
+      <div class="v19-entitlements"><span class="mini-note">Open account to load gallery access.</span></div>
+      <button class="button load-client-access">Show Current Access</button>
+      <div class="v20-account-message"></div>
+    </article>`;
+}
+
+function wireAccountCards(root){
+  root.querySelectorAll('.v19-account-card').forEach(card=>{
+    const uid=card.dataset.user;
+    card.querySelector('.load-client-access').onclick=()=>loadEntitlements(card,uid);
+
+    card.querySelector('.grant-client-access').onclick=async()=>{
+      const gid=card.querySelector('.client-gallery-select').value;
+      if(!gid)return alert('Choose a gallery.');
+      const msg=card.querySelector('.v20-account-message');
+      try{
+        msg.textContent='Granting access…';
+        await req(`/api/admin/accounts/${encodeURIComponent(uid)}/gallery-entitlements`,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            gallery_id:gid,
+            can_download_all:card.querySelector('.client-download').checked,
+            can_order_prints:card.querySelector('.client-prints').checked
+          })
+        });
+        msg.textContent='Gallery access saved.';
+        await loadEntitlements(card,uid);
+      }catch(e){msg.textContent=e.message}
+    };
+
+    const deactivate=card.querySelector('.account-deactivate');
+    if(deactivate) deactivate.onclick=async()=>{
+      if(!confirm('Deactivate this account? The user will not be able to log in until you reactivate it.'))return;
+      const msg=card.querySelector('.v20-account-message');
+      try{
+        msg.textContent='Deactivating…';
+        await req(`/api/admin/accounts/${encodeURIComponent(uid)}/deactivate`,{method:'POST'});
+        msg.textContent='Account deactivated.';
+        await load();
+      }catch(e){msg.textContent=e.message}
+    };
+
+    const reactivate=card.querySelector('.account-reactivate');
+    if(reactivate) reactivate.onclick=async()=>{
+      const msg=card.querySelector('.v20-account-message');
+      try{
+        msg.textContent='Reactivating…';
+        await req(`/api/admin/accounts/${encodeURIComponent(uid)}/reactivate`,{method:'POST'});
+        msg.textContent='Account reactivated.';
+        await load();
+      }catch(e){msg.textContent=e.message}
+    };
+
+    card.querySelector('.account-delete').onclick=async()=>{
+      const label=card.querySelector('.v19-account-head strong')?.textContent||'this account';
+      if(!confirm(`Delete ${label}? This permanently removes the login and related account data. Accounts with purchase history cannot be deleted.`))return;
+      if(!confirm('Are you sure? This cannot be undone.'))return;
+      const msg=card.querySelector('.v20-account-message');
+      try{
+        msg.textContent='Deleting account…';
+        await req(`/api/admin/accounts/${encodeURIComponent(uid)}`,{method:'DELETE'});
+        msg.textContent='Account deleted.';
+        await load();
+      }catch(e){
+        msg.textContent=e.message;
+        if(/purchase history/i.test(e.message||'')){
+          msg.innerHTML=`<strong>Delete blocked:</strong> ${esc(e.message)} Use Deactivate instead.`;
+        }
+      }
+    };
+  });
+}
+
+async function loadEntitlements(card,uid){
+  const box=card.querySelector('.v19-entitlements');
+  box.innerHTML='<span class="mini-note">Loading…</span>';
+  try{
+    const d=await req(`/api/admin/accounts/${encodeURIComponent(uid)}/gallery-entitlements`);
+    const rows=d.entitlements||[];
+    box.innerHTML=rows.length?rows.map(e=>`
+      <div class="v19-entitlement ${e.status==='revoked'?'revoked':''}">
+        <span><strong>${esc(e.title)}</strong><small>${esc(e.shoot_date||'')} · ${e.can_download_all?'All digitals':'No digital entitlement'} · ${e.can_order_prints?'Prints allowed':'Prints off'}</small></span>
+        ${e.status==='active'?`<button class="button revoke-entitlement" data-id="${esc(e.id)}">Revoke</button>`:`<em>Revoked</em>`}
+      </div>`).join(''):'<span class="mini-note">No client gallery access yet.</span>';
+    box.querySelectorAll('.revoke-entitlement').forEach(btn=>btn.onclick=async()=>{
+      await req(`/api/admin/accounts/${encodeURIComponent(uid)}/gallery-entitlements/${encodeURIComponent(btn.dataset.id)}/revoke`,{method:'POST'});
+      await loadEntitlements(card,uid);
+    });
+  }catch(e){box.innerHTML='<span class="mini-note">'+esc(e.message)+'</span>'}
+}
+
+function dateInputValue(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function reportPreset(name){
+  const now=new Date();
+  let start=new Date(now.getFullYear(),now.getMonth(),1),end=new Date(now);
+  if(name==='today'){start=new Date(now.getFullYear(),now.getMonth(),now.getDate());}
+  if(name==='7days'){start=new Date(now);start.setDate(start.getDate()-6);}
+  if(name==='lastmonth'){
+    start=new Date(now.getFullYear(),now.getMonth()-1,1);
+    end=new Date(now.getFullYear(),now.getMonth(),0);
+  }
+  if(name==='year'){start=new Date(now.getFullYear(),0,1);}
+  $('report-start').value=dateInputValue(start);
+  $('report-end').value=dateInputValue(end);
+  runReport();
+}
+function money(cents){return '$'+(Number(cents||0)/100).toFixed(2)}
+
+
+let rosterState={rosters:[],selected:null,players:[],galleries:[]};
+
+async function loadRosters(){
+  const d=await req('/api/admin/rosters');
+  rosterState.rosters=d.rosters||[];
+}
+function rosterMeta(r){return [r.school,r.sport,r.team,r.season].filter(Boolean).join(' · ')}
+
+async function renderRosters(){
+  const main=$('v15-main');
+  main.innerHTML=`
+    <section class="v15-section">
+      <div class="v15-section-head">
+        <div><div class="kicker">PLAYER DATA</div><h1>Rosters</h1>
+        <p>Create a roster once, then assign it to any gallery. Player tagging uses these names, schools, sports and jersey numbers for suggestions.</p></div>
+        <button id="new-roster" class="primary-btn">New Roster</button>
+      </div>
+      <div class="v21-roster-layout">
+        <aside class="v21-roster-list">
+          <div id="roster-list-status" class="mini-note">Loading…</div>
+          <div id="roster-list"></div>
+        </aside>
+        <section id="roster-editor" class="v21-roster-editor">
+          <div class="empty-state">Select a roster or create a new one.</div>
+        </section>
+      </div>
+    </section>`;
+  $('new-roster').onclick=()=>openRosterEditor(null);
+  try{await loadRosters();renderRosterList()}catch(e){$('roster-list-status').textContent=e.message}
+}
+function renderRosterList(){
+  $('roster-list-status').textContent=`${rosterState.rosters.length} roster${rosterState.rosters.length===1?'':'s'}`;
+  const box=$('roster-list');
+  box.innerHTML=rosterState.rosters.map(r=>`
+    <button class="v21-roster-card ${r.status==='archived'?'archived':''}" data-roster="${esc(r.id)}">
+      <strong>${esc(r.name)}</strong>
+      <span>${esc(rosterMeta(r)||'No school/team details')}</span>
+      <small>${r.player_count||0} players · ${r.gallery_count||0} galleries · ${esc(r.status)}</small>
+    </button>`).join('')||'<div class="empty-state small">No rosters yet.</div>';
+  box.querySelectorAll('[data-roster]').forEach(b=>b.onclick=()=>openRosterEditor(b.dataset.roster));
+}
+async function openRosterEditor(id){
+  const ed=$('roster-editor');
+  if(!id){
+    rosterState.selected=null;rosterState.players=[];rosterState.galleries=[];
+    ed.innerHTML=rosterEditorHtml(null,[],[]);wireRosterEditor();return;
+  }
+  ed.innerHTML='<div class="mini-note">Loading…</div>';
+  try{
+    const [p,g]=await Promise.all([
+      req(`/api/admin/rosters/${encodeURIComponent(id)}/players`),
+      req(`/api/admin/rosters/${encodeURIComponent(id)}/galleries`)
+    ]);
+    rosterState.selected=p.roster;rosterState.players=p.players||[];rosterState.galleries=g.galleries||[];
+    ed.innerHTML=rosterEditorHtml(rosterState.selected,rosterState.players,rosterState.galleries);
+    wireRosterEditor();
+  }catch(e){ed.innerHTML=`<div class="empty-state">${esc(e.message)}</div>`}
+}
+function rosterEditorHtml(r,players,galleries){
+  const isNew=!r;
+  return `
+    <div class="v21-roster-head">
+      <div><div class="kicker">${isNew?'NEW ROSTER':'EDIT ROSTER'}</div><h2>${esc(r?.name||'Create Roster')}</h2></div>
+      ${isNew?'':`<button id="toggle-roster-status" class="button">${r.status==='active'?'Archive':'Reactivate'}</button>`}
+    </div>
+    <div class="v21-roster-form">
+      <label>Roster Name<input id="roster-name" value="${esc(r?.name||'')}" placeholder="North County Football 2026"></label>
+      <label>School<input id="roster-school" value="${esc(r?.school||'')}" placeholder="North County HS"></label>
+      <label>Team<input id="roster-team" value="${esc(r?.team||'')}" placeholder="Varsity / 7on7 Red"></label>
+      <label>Sport<input id="roster-sport" value="${esc(r?.sport||'')}" placeholder="Football"></label>
+      <label>Season / Year<input id="roster-season" value="${esc(r?.season||'')}" placeholder="2026"></label>
+      <label class="wide">Notes<textarea id="roster-notes" rows="2">${esc(r?.notes||'')}</textarea></label>
+      <button id="save-roster" class="primary-btn">${isNew?'Create Roster':'Save Roster'}</button>
+      <div id="roster-save-status" class="mini-note"></div>
+    </div>
+    ${isNew?'':`
+    <section class="v21-roster-subsection">
+      <div class="v21-subhead"><div><div class="kicker">PLAYERS</div><h3>Roster Players</h3></div></div>
+      <div class="v21-add-player">
+        <input id="rp-first" placeholder="First name">
+        <input id="rp-last" placeholder="Last name">
+        <input id="rp-number" placeholder="Jersey #">
+        <input id="rp-school" placeholder="School override">
+        <input id="rp-team" placeholder="Team override">
+        <input id="rp-sport" placeholder="Sport override">
+        <button id="add-roster-player" class="primary-btn">Add Player</button>
+      </div>
+      <div>${players.map(p=>`
+        <div class="v21-player-row" data-player="${esc(p.id)}">
+          <div><strong>${esc(p.display_name)}</strong>
+          <span>${esc([p.school,p.sport,p.team,p.jersey_number?`#${p.jersey_number}`:''].filter(Boolean).join(' · '))}</span></div>
+          <button class="button edit-roster-player">Edit</button>
+          <button class="button danger remove-roster-player">Remove</button>
+        </div>`).join('')||'<div class="empty-state small">No players yet.</div>'}</div>
+    </section>
+
+    <section class="v21-roster-subsection">
+      <div class="v21-subhead"><div><div class="kicker">GALLERIES</div><h3>Assigned Galleries</h3></div></div>
+      <div class="v21-gallery-assign">
+        <select id="roster-gallery-select"><option value="">Choose gallery…</option>
+          ${recent.map(g=>`<option value="${esc(g.id)}">${esc(g.title)}</option>`).join('')}
+        </select>
+        <button id="assign-roster-gallery" class="primary-btn">Assign Gallery</button>
+      </div>
+      <div>${galleries.map(g=>`
+        <div class="v21-gallery-row" data-gallery="${esc(g.id)}">
+          <div><strong>${esc(g.title)}</strong><span>${esc(g.shoot_date||'')}</span></div>
+          <button class="button remove-roster-gallery">Remove</button>
+        </div>`).join('')||'<div class="empty-state small">No galleries assigned yet.</div>'}</div>
+    </section>`}
+  `;
+}
+function wireRosterEditor(){
+  $('save-roster').onclick=saveRoster;
+  $('toggle-roster-status')?.addEventListener('click',toggleRosterStatus);
+  $('add-roster-player')?.addEventListener('click',addRosterPlayer);
+  $('assign-roster-gallery')?.addEventListener('click',assignRosterGallery);
+  document.querySelectorAll('.remove-roster-player').forEach(b=>b.onclick=()=>removeRosterPlayer(b.closest('[data-player]').dataset.player));
+  document.querySelectorAll('.edit-roster-player').forEach(b=>b.onclick=()=>editRosterPlayer(b.closest('[data-player]').dataset.player));
+  document.querySelectorAll('.remove-roster-gallery').forEach(b=>b.onclick=()=>removeRosterGallery(b.closest('[data-gallery]').dataset.gallery));
+}
+async function saveRoster(){
+  const st=$('roster-save-status');st.textContent='Saving…';
+  const body={name:$('roster-name').value.trim(),school:$('roster-school').value.trim(),team:$('roster-team').value.trim(),sport:$('roster-sport').value.trim(),season:$('roster-season').value.trim(),notes:$('roster-notes').value.trim()};
+  try{
+    if(rosterState.selected){
+      await req(`/api/admin/rosters/${encodeURIComponent(rosterState.selected.id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      await loadRosters();renderRosterList();await openRosterEditor(rosterState.selected.id);
+    }else{
+      const d=await req('/api/admin/rosters',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      await loadRosters();renderRosterList();await openRosterEditor(d.id);
+    }
+  }catch(e){st.textContent=e.message}
+}
+async function toggleRosterStatus(){
+  const next=rosterState.selected.status==='active'?'archived':'active';
+  await req(`/api/admin/rosters/${encodeURIComponent(rosterState.selected.id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:next})});
+  await loadRosters();renderRosterList();await openRosterEditor(rosterState.selected.id);
+}
+async function addRosterPlayer(){
+  const body={first_name:$('rp-first').value.trim(),last_name:$('rp-last').value.trim(),jersey_number:$('rp-number').value.trim(),school:$('rp-school').value.trim(),team:$('rp-team').value.trim(),sport:$('rp-sport').value.trim()};
+  try{
+    await req(`/api/admin/rosters/${encodeURIComponent(rosterState.selected.id)}/players`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    await openRosterEditor(rosterState.selected.id);
+  }catch(e){alert(e.message)}
+}
+async function editRosterPlayer(id){
+  const p=rosterState.players.find(x=>x.id===id);if(!p)return;
+  const name=prompt('Player name',p.display_name);if(name===null)return;
+  const parts=name.trim().split(/\s+/);const first=parts.slice(0,-1).join(' ')||p.first_name;const last=parts.length>1?parts.at(-1):p.last_name;
+  const jersey=prompt('Jersey number',p.jersey_number||'');if(jersey===null)return;
+  const school=prompt('School',p.school||'');if(school===null)return;
+  const sport=prompt('Sport',p.sport||'');if(sport===null)return;
+  const team=prompt('Team',p.team||'');if(team===null)return;
+  await req(`/api/admin/roster-players/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({first_name:first,last_name:last,display_name:name.trim(),jersey_number:jersey,school,sport,team})});
+  await openRosterEditor(rosterState.selected.id);
+}
+async function removeRosterPlayer(id){
+  if(!confirm('Remove this player from the active roster?'))return;
+  await req(`/api/admin/roster-players/${encodeURIComponent(id)}`,{method:'DELETE'});
+  await openRosterEditor(rosterState.selected.id);
+}
+async function assignRosterGallery(){
+  const gid=$('roster-gallery-select').value;if(!gid)return alert('Choose a gallery.');
+  await req(`/api/admin/rosters/${encodeURIComponent(rosterState.selected.id)}/galleries`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gallery_id:gid})});
+  await loadRosters();renderRosterList();await openRosterEditor(rosterState.selected.id);
+}
+async function removeRosterGallery(gid){
+  if(!confirm('Remove this roster from that gallery?'))return;
+  await req(`/api/admin/rosters/${encodeURIComponent(rosterState.selected.id)}/galleries/${encodeURIComponent(gid)}`,{method:'DELETE'});
+  await loadRosters();renderRosterList();await openRosterEditor(rosterState.selected.id);
+}
+
+async function renderReports(){
+  const main=$('v15-main');
+  main.innerHTML=`
+  <section class="v15-section">
+    <div class="v15-section-head"><div><div class="kicker">ADMIN REPORTING</div><h1>Reports / Activity</h1>
+      <p>Current month opens by default. Use the presets or choose any custom date range.</p></div>
+    </div>
+
+    <div class="v20-report-toolbar">
+      <div class="v20-presets">
+        <button class="button" data-report-preset="today">Today</button>
+        <button class="button" data-report-preset="7days">Last 7 Days</button>
+        <button class="button primary-lite" data-report-preset="month">This Month</button>
+        <button class="button" data-report-preset="lastmonth">Last Month</button>
+        <button class="button" data-report-preset="year">This Year</button>
+      </div>
+      <div class="v20-custom-range">
+        <label>Start<input id="report-start" type="date"></label>
+        <label>End<input id="report-end" type="date"></label>
+        <button id="run-report" class="primary-btn">Run Report</button>
+      </div>
+    </div>
+
+    <section class="v20-admin-settings">
+      <div><div class="kicker">EMAIL ALERTS</div><h2>Admin Notification Settings</h2></div>
+      <div class="v20-settings-grid">
+        <label class="wide">Admin Notification Email<input id="admin-notify-email" type="email" placeholder="you@example.com"></label>
+        <label><input id="admin-alert-claims" type="checkbox"> Pending player-tag alerts</label>
+        <label><input id="admin-alert-purchases" type="checkbox"> Purchase alerts</label>
+        <label><input id="admin-monthly-enabled" type="checkbox"> Monthly activity statement</label>
+        <label>Statement day<input id="admin-monthly-day" type="number" min="1" max="28"></label>
+        <button id="save-admin-settings" class="primary-btn">Save Settings</button>
+      </div>
+      <div id="admin-settings-status" class="mini-note"></div>
+      <div class="mini-note">Actual outbound email delivery will activate when we connect the email provider. Purchase alerts will activate from verified payment success after Stripe is connected.</div>
+    </section>
+
+    <div id="report-status" class="mini-note">Loading current month…</div>
+    <div id="report-summary" class="v20-report-summary"></div>
+    <div class="v20-report-sections">
+      <section><h2>Top Galleries / Events</h2><div id="report-galleries"></div></section>
+      <section><h2>Fan Favorites</h2><div id="report-fans"></div></section>
+      <section><h2>Activity Breakdown</h2><div id="report-events"></div></section>
+      <section><h2>Pending Actions</h2><div id="report-pending"></div></section>
+    </div>
+  </section>`;
+
+  main.querySelectorAll('[data-report-preset]').forEach(b=>b.onclick=()=>reportPreset(b.dataset.reportPreset));
+  $('run-report').onclick=runReport;
+  $('save-admin-settings').onclick=saveAdminSettings;
+
+  await loadAdminSettings();
+  reportPreset('month');
+}
+
+async function loadAdminSettings(){
+  try{
+    const d=await req('/api/admin/notification-settings');
+    const s=d.settings||{};
+    $('admin-notify-email').value=s.notification_email||'';
+    $('admin-alert-claims').checked=Boolean(s.pending_claim_alerts);
+    $('admin-alert-purchases').checked=Boolean(s.purchase_alerts);
+    $('admin-monthly-enabled').checked=Boolean(s.monthly_statement_enabled);
+    $('admin-monthly-day').value=Number(s.monthly_statement_day||1);
+  }catch(e){
+    $('admin-settings-status').textContent='Could not load notification settings: '+e.message;
+  }
+}
+async function saveAdminSettings(){
+  const st=$('admin-settings-status');st.textContent='Saving…';
+  try{
+    await req('/api/admin/notification-settings',{
+      method:'PATCH',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        notification_email:$('admin-notify-email').value.trim(),
+        pending_claim_alerts:$('admin-alert-claims').checked,
+        purchase_alerts:$('admin-alert-purchases').checked,
+        monthly_statement_enabled:$('admin-monthly-enabled').checked,
+        monthly_statement_day:Number($('admin-monthly-day').value||1)
+      })
+    });
+    st.textContent='Settings saved.';
+  }catch(e){st.textContent=e.message}
+}
+async function runReport(){
+  const start=$('report-start').value,end=$('report-end').value,st=$('report-status');
+  if(!start||!end){st.textContent='Choose a start and end date.';return}
+  st.textContent='Running report…';
+  try{
+    const d=await req('/api/admin/reports/activity?'+new URLSearchParams({start,end}).toString());
+    const t=d.totals||{};
+    $('report-summary').innerHTML=[
+      ['Logins',t.logins||0],
+      ['Unique Users',t.unique_users||0],
+      ['New Accounts',t.new_accounts||0],
+      ['Purchases',t.purchases||0],
+      ['Revenue',money(t.revenue_cents)],
+      ['Ratings',t.ratings||0],
+      ['Claims',t.claims_submitted||0],
+      ['Approved',t.claims_approved||0],
+      ['Rejected',t.claims_rejected||0],
+      ['Tags Added',t.tags_added||0],
+      ['Client Access',t.client_gallery_grants||0]
+    ].map(([k,val])=>`<article><span>${esc(k)}</span><strong>${esc(val)}</strong></article>`).join('');
+
+    $('report-galleries').innerHTML=(d.top_galleries||[]).map(g=>`
+      <div class="v20-report-row">
+        <span><strong>${esc(g.title||'Untitled Gallery')}</strong><small>${esc(g.shoot_date||'')}</small></span>
+        <span>${g.activity_count} activity</span><span>${g.ratings||0} ratings</span>
+        <span>${g.purchases||0} purchases</span><span>${money(g.revenue_cents)}</span>
+      </div>`).join('')||'<div class="empty-state small">No gallery activity in this period.</div>';
+
+    $('report-fans').innerHTML=(d.fan_favorites||[]).map((p,i)=>`
+      <div class="v20-report-row">
+        <span><strong>#${i+1} ${esc(p.filename||'Photo')}</strong><small>${esc(p.title||'')}</small></span>
+        <span>${p.average_rating} ★</span><span>${p.rating_count} rating${Number(p.rating_count)===1?'':'s'}</span>
+      </div>`).join('')||'<div class="empty-state small">No Fan Favorites ratings in this period.</div>';
+
+    $('report-events').innerHTML=(d.event_counts||[]).map(x=>`
+      <div class="v20-report-row"><span><strong>${esc(String(x.event_type).replaceAll('_',' '))}</strong></span><span>${x.count}</span></div>
+    `).join('')||'<div class="empty-state small">No recorded activity in this period.</div>';
+
+    $('report-pending').innerHTML=`
+      <div class="v20-pending-card"><strong>${d.pending?.photo_claims||0}</strong><span>Pending “That’s Me” claims</span></div>
+      <div class="v20-pending-card"><strong>${d.pending?.admin_email_batches||0}</strong><span>Pending admin email batches</span></div>`;
+
+    st.textContent=`Report: ${start} through ${end}`;
+  }catch(e){st.textContent='Could not run report: '+e.message}
+}
+
+async function renderTags(){
+  const main=$('v15-main');
+  main.innerHTML=`
+  <section class="v15-section">
+    <div class="v15-section-head"><div><div class="kicker">GENERAL SEARCH TAGS</div><h1>Tags</h1>
+    <p>Tag any photo or entire gallery with a person, product, team, sport, event, location, subject, or custom label. These tags are descriptive/searchable only; a normal Person tag does not grant athlete privileges.</p></div></div>
+    <div class="v18-tag-layout">
+      <aside class="v18-gallery-picker">
+        <h3>1. Choose Gallery</h3>
+        <select id="tag-gallery"><option value="">Select gallery…</option>${recent.map(g=>`<option value="${esc(g.id)}">${esc(g.title)}</option>`).join('')}</select>
+        <div id="gallery-tag-box"></div>
+      </aside>
+      <div class="v18-photo-tag-area">
+        <div id="tag-gallery-message" class="empty-state small">Choose a gallery to tag the entire gallery or individual photos.</div>
+        <div id="tag-photo-grid" class="v18-tag-photo-grid"></div>
+      </div>
+    </div>
+  </section>`;
+  $('tag-gallery').onchange=()=>loadTagGallery($('tag-gallery').value);
+}
+function tagTypeOptions(selected='custom'){
+  return ['person','product','team','sport','event','location','subject','custom'].map(x=>`<option value="${x}" ${x===selected?'selected':''}>${x[0].toUpperCase()+x.slice(1)}</option>`).join('');
+}
+async function loadTagGallery(gid){
+  const msg=$('tag-gallery-message'),grid=$('tag-photo-grid'),box=$('gallery-tag-box');
+  if(!gid){grid.innerHTML='';box.innerHTML='';return}
+  msg.textContent='Loading gallery…';grid.innerHTML='';
+  try{
+    const [photos,gt]=await Promise.all([
+      req('/api/admin/galleries/'+encodeURIComponent(gid)+'/photos'),
+      req('/api/admin/galleries/'+encodeURIComponent(gid)+'/tags')
+    ]);
+    box.innerHTML=`<div class="v18-gallery-tags"><h3>2. Gallery Tags</h3>
+      <div class="v18-tag-add"><select class="gt-type">${tagTypeOptions()}</select><input class="gt-label" placeholder="Tag entire gallery"><button class="button gt-add">Add</button></div>
+      <div class="v18-chip-row">${(gt.tags||[]).map(t=>`<button class="v18-tag-chip" data-tag="${esc(t.tag_id)}" title="Click to remove"><b>${esc(t.tag_type)}</b> ${esc(t.label)} ×</button>`).join('')||'<span class="mini-note">No gallery tags yet.</span>'}</div>
+    </div>`;
+    box.querySelector('.gt-add').onclick=async()=>{
+      const label=box.querySelector('.gt-label').value.trim(),tag_type=box.querySelector('.gt-type').value;
+      if(!label)return;
+      await req('/api/admin/galleries/'+encodeURIComponent(gid)+'/tags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,tag_type})});
+      await loadTagGallery(gid);
+    };
+    box.querySelectorAll('.v18-tag-chip').forEach(ch=>ch.onclick=async()=>{
+      await req('/api/admin/galleries/'+encodeURIComponent(gid)+'/tags/'+encodeURIComponent(ch.dataset.tag),{method:'DELETE'});
+      await loadTagGallery(gid);
+    });
+
+    const rows=photos.photos||[];
+    msg.textContent=rows.length?'3. Tag Individual Photos':'No photos in this gallery.';
+    grid.innerHTML=rows.map(p=>`<article class="v18-tag-photo" data-photo="${esc(p.id)}">
+      <img loading="lazy" src="${esc(ActionAPI.base()+p.preview_url)}" alt="${esc(p.filename)}">
+      <div class="v18-tag-photo-copy"><strong>${esc(p.filename)}</strong>
+        <div class="v18-tag-add"><select class="pt-type">${tagTypeOptions()}</select><input class="pt-label" placeholder="Person, product, subject…"><button class="button pt-add">Add</button></div>
+        <div class="v18-chip-row pt-chips"><span class="mini-note">Loading tags…</span></div>
+      </div>
+    </article>`).join('');
+    for(const card of grid.querySelectorAll('.v18-tag-photo')){
+      await loadPhotoTags(card,gid);
+      card.querySelector('.pt-add').onclick=async()=>{
+        const label=card.querySelector('.pt-label').value.trim(),tag_type=card.querySelector('.pt-type').value;
+        if(!label)return;
+        await req('/api/admin/photos/'+encodeURIComponent(card.dataset.photo)+'/tags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,tag_type})});
+        card.querySelector('.pt-label').value='';
+        await loadPhotoTags(card,gid);
+      };
+    }
+  }catch(e){msg.textContent='Could not load tagging tools: '+e.message}
+}
+async function loadPhotoTags(card,gid){
+  const d=await req('/api/admin/photos/'+encodeURIComponent(card.dataset.photo)+'/tags');
+  const chips=card.querySelector('.pt-chips');
+  chips.innerHTML=(d.tags||[]).map(t=>`<button class="v18-tag-chip" data-tag="${esc(t.tag_id)}" title="Click to remove"><b>${esc(t.tag_type)}</b> ${esc(t.label)} ×</button>`).join('')||'<span class="mini-note">No tags.</span>';
+  chips.querySelectorAll('.v18-tag-chip').forEach(ch=>ch.onclick=async()=>{
+    await req('/api/admin/photos/'+encodeURIComponent(card.dataset.photo)+'/tags/'+encodeURIComponent(ch.dataset.tag),{method:'DELETE'});
+    await loadPhotoTags(card,gid);
+  });
+}
+
+function renderRecent(){
+  const main=$('v15-main');
+  main.innerHTML=`
+  <section class="v15-section">
+    <div class="v15-section-head"><div><div class="kicker">Recent Events</div><h1>Recent Events</h1>
+    <p>The main Admin page still handles full-folder new-shoot uploads. Here you can add a few extra photos directly to an existing shoot.</p></div>
+    <a class="primary-btn" href="admin.html#new">Open Main Folder Uploader</a></div>
+
+    <div class="v15-recent-grid">
+      ${recent.map(g=>`<article class="v15-recent-card" data-gallery="${esc(g.id)}">
+        <div><h3>${esc(g.title)}</h3><small>${esc(g.shoot_date||'')} · ${g.photo_count||0} photos</small></div>
+        <div class="v15-recent-actions"><a class="button" href="recent-gallery-editor.html?id=${encodeURIComponent(g.id)}">Open Gallery Editor</a></div>
+        <label>Watermark<select class="recent-watermark"><option value="standard">Standard</option><option value="light">Light</option><option value="strong">Strong</option><option value="none">None</option></select></label>
+        <div class="v15-drop recent-drop"><input type="file" accept="image/jpeg,image/png,image/webp" multiple><strong>Drop extra photos here</strong><span>or click to select files</span></div>
+        <div class="mini-note recent-status">Ready.</div>
+      </article>`).join('')}
+    </div>
+  </section>`;
+  main.querySelectorAll('.v15-recent-card').forEach(card=>{
+    const gid=card.dataset.gallery,zone=card.querySelector('.recent-drop'),input=zone.querySelector('input'),status=card.querySelector('.recent-status');
+    wireDrop(zone,input,async files=>{try{await uploadGalleryFiles(gid,files,card.querySelector('.recent-watermark').value,status)}catch(e){status.textContent='Upload stopped: '+e.message}});
+  });
+}
+
+/* ---------- cover crop ---------- */
+function openCoverCrop(x,device='desktop'){
+  coverTarget=x;coverDevice=device;
+  coverState={
+    desktop:JSON.parse(JSON.stringify(x.cover_crop_desktop||defaultCrop())),
+    mobile:JSON.parse(JSON.stringify(x.cover_crop_mobile||defaultCrop()))
+  };
+  $('cover-name').textContent=x.filename;
+  $('cover-source').onload=()=>requestAnimationFrame(renderCoverCrop);
+  $('cover-source').src=x.src;$('cover-preview-image').src=x.src;
+  $('cover-modal').hidden=false;
+  document.querySelectorAll('[data-cover-device]').forEach(b=>b.classList.toggle('active',b.dataset.coverDevice===device));
+  renderCoverCrop();
+}
+function coverCurrent(){return coverState[coverDevice]||defaultCrop()}
+function coverImageRect(){
+  const stage=$('cover-stage'),img=$('cover-source'),r=stage.getBoundingClientRect(),nw=img.naturalWidth||1,nh=img.naturalHeight||1,sc=Math.min(r.width/nw,r.height/nh),w=nw*sc,h=nh*sc;
+  return{left:(r.width-w)/2,top:(r.height-h)/2,width:w,height:h}
+}
+function coverPct(e){
+  const sr=$('cover-stage').getBoundingClientRect(),r=coverImageRect();
+  return{x:Math.max(0,Math.min(100,(e.clientX-sr.left-r.left)/r.width*100)),y:Math.max(0,Math.min(100,(e.clientY-sr.top-r.top)/r.height*100))}
+}
+function renderCoverCrop(){
+  if(!coverTarget)return;
+  const c=coverCurrent(),r=coverImageRect(),box=$('cover-box');
+  box.style.left=(r.left+r.width*c.x/100)+'px';box.style.top=(r.top+r.height*c.y/100)+'px';
+  box.style.width=(r.width*c.w/100)+'px';box.style.height=(r.height*c.h/100)+'px';
+  requestAnimationFrame(()=>ActionPortfolio.renderCropInto($('cover-preview-image'),coverTarget,c,true).catch(()=>{}));
+}
+$('cover-box').onpointerdown=e=>{e.preventDefault();coverDrag={resize:e.target.tagName==='I',start:coverPct(e),orig:{...coverCurrent()}}};
+window.addEventListener('pointermove',e=>{
+  if(!coverDrag)return;
+  const p=coverPct(e),dx=p.x-coverDrag.start.x,dy=p.y-coverDrag.start.y,o=coverDrag.orig,n={...o};
+  if(coverDrag.resize){n.w=Math.max(8,Math.min(100-o.x,o.w+dx));n.h=Math.max(8,Math.min(100-o.y,o.h+dy))}
+  else{n.x=Math.max(0,Math.min(100-o.w,o.x+dx));n.y=Math.max(0,Math.min(100-o.h,o.y+dy))}
+  coverState[coverDevice]=n;renderCoverCrop();
+});
+window.addEventListener('pointerup',()=>coverDrag=null);
+document.querySelectorAll('[data-cover-device]').forEach(b=>b.onclick=()=>{coverDevice=b.dataset.coverDevice;document.querySelectorAll('[data-cover-device]').forEach(x=>x.classList.toggle('active',x===b));renderCoverCrop()});
+$('cover-reset').onclick=()=>{coverState[coverDevice]=defaultCrop();renderCoverCrop()};
+$('cover-close').onclick=()=>$('cover-modal').hidden=true;
+$('cover-save').onclick=async()=>{
+  if(!coverTarget)return;
+  const data={cover_crop_desktop:coverState.desktop,cover_crop_mobile:coverState.mobile};
+  if(coverTarget.local)await saveLegacy(coverTarget,data);else await patchCloud(coverTarget.id,data);
+  $('cover-modal').hidden=true;await load();
+};
+
+/* keyboard shortcuts */
+window.addEventListener('keydown',e=>{
+  if(view!=='landing'||!landing.length)return;
+  if(e.ctrlKey&&e.key.toLowerCase()==='s'){
+    e.preventDefault();
+    saveBothDeviceCrops();
+    return;
+  }
+  if(e.target&&['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+  if(e.key==='ArrowRight'){batchIndex=(batchIndex+1)%landing.length;renderLanding()}
+  if(e.key==='ArrowLeft'){batchIndex=(batchIndex-1+landing.length)%landing.length;renderLanding()}
+});
+
+if(token())$('v15-connect').click();
+</script>
+</body>
+</html>

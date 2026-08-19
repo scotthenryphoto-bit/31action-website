@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Events | 31 ACTION</title><link rel="stylesheet" href="assets/css/styles.css"></head><body><header class="site-header"><a class="brand" href="index.html"><span class="brand-main"><span class="n">31</span><span class="a">ACTION</span></span><span class="brand-sub">PHOTOGRAPHY BY SCOTT HENRY</span></a><button class="menu-btn">MENU</button><nav class="main-nav"><a href="index.html">Home</a><a class="active" href="work.html">Portfolio</a><a href="reels.html">Reels</a><a href="recent-shoots.html">Recent Events</a><a href="about.html">About</a><a href="contact.html">Contact</a><a class="player-link" href="player.html">Player / Client Login</a><a class="cart-link" href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a class="instagram" href="https://www.instagram.com/northcountyunofficial/" target="_blank">◎</a></nav></header><main class="gallery-wrap"><div class="kicker">Portfolio</div><h1 class="big-title">Events</h1><div class="sticky-categories"><a href="sports.html">Sports</a><a href="portraits.html">Portraits</a><a href="events.html">Events</a><a href="other.html">Other</a></div><div id="gallery-grid" class="gallery-grid"></div></main><footer class="site-footer"><a class="footer-brand" href="index.html"><span class="n">31</span><span class="a">ACTION</span></a><nav class="footer-nav"><a href="index.html">Home</a><a href="work.html">Portfolio</a><a href="reels.html">Reels</a><a href="recent-shoots.html">Recent Events</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="player.html">Player / Client Login</a><a href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a href="admin-gate.html" style="color:#555">Admin</a></nav></footer><script src="assets/js/images.js"></script><script src="assets/js/api-config.js"></script><script src="assets/js/portfolio-api.js"></script><script src="assets/js/store-config.js"></script><script src="assets/js/site.js"></script><script>ActionPortfolio.renderCategory('events')</script><script src="assets/js/seo.js"></script>
+<script>
+(function(){
+  const link=[...document.querySelectorAll('a[href="player.html"]')].find(a=>a.closest('.main-nav')) || document.querySelector('a[href="player.html"]');
+  if(!link||!window.ActionAPI)return;
+  ActionAPI.request('/api/auth/me').then(me=>{
+    if(!me?.logged_in)return;
+    return ActionAPI.request('/api/account/notifications');
+  }).then(d=>{
+    if(!d?.unread_count)return;
+    let badge=link.querySelector('.account-notification-badge');
+    if(!badge){
+      badge=document.createElement('span');
+      badge.className='account-notification-badge';
+      link.appendChild(badge);
+    }
+    badge.textContent=String(Math.min(99,Number(d.unread_count)||0));
+  }).catch(()=>{});
+})();
+</script>
+
+</body></html>

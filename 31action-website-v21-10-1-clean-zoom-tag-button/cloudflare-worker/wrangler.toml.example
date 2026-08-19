@@ -1,0 +1,18 @@
+name = "31action-api"
+main = "src/worker.js"
+compatibility_date = "2026-08-01"
+
+[[r2_buckets]]
+binding = "ORIGINALS"
+bucket_name = "31action-photos"
+
+[[r2_buckets]]
+binding = "PREVIEWS"
+bucket_name = "31action-previews"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "31action"
+database_id = "REPLACE_AFTER_CREATING_D1"
+
+# Add ADMIN_TOKEN as an encrypted secret with Wrangler; do not place it in this file.

@@ -1,0 +1,572 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>31 ACTION Admin</title><link rel="stylesheet" href="assets/css/styles.css"></head><body><script>if(!sessionStorage.getItem('31action_admin_token'))location.replace('admin-gate.html');</script>
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-main"><span class="n">31</span><span class="a">ACTION</span></span><span class="brand-sub">OWNER ADMIN</span></a><nav class="main-nav"><a href="index.html">View Site</a><a href="sales.html">Sales</a><a href="crop-tool.html">Landing Editor</a></nav></header>
+<div class="admin-shell"><aside class="admin-side"><div class="kicker">Admin</div><a class="active" href="#new">New Shoot</a><a href="#galleries">Recent Galleries</a><a href="visual-editor.html">Visual Portfolio Editor</a><a href="#portfolio-manager">Photo Library</a><a href="#content-manager">About & Contact</a><a href="seo-manager.html">SEO / Search</a><a href="#orders">Orders</a><a href="#customers">Customers</a><a href="#access">Free Access</a><a href="#pricing">Pricing</a><a href="#cloudflare">Cloudflare</a></aside>
+<main class="admin-main"><div class="admin-top"><div><div class="kicker">Owner Dashboard</div><h1 class="big-title">31 ACTION ADMIN</h1></div><div class="status-pill" id="api-status"><span class="connect-dot"></span>Checking Cloudflare…</div></div>
+<div class="admin-grid">
+<section class="admin-card"><div class="kicker">Recent Events</div><div class="metric" id="gallery-count">— <small>galleries</small></div><p>Published galleries appear automatically under Recent Shoots.</p></section>
+<section class="admin-card"><div class="kicker">Orders</div><div class="metric" id="order-count">0 <small>test orders</small></div><p>Stripe order sync comes in the next phase.</p></section>
+<section class="admin-card" id="cloudflare"><div class="kicker">Storage</div><h2>Cloudflare R2 + D1</h2><p id="storage-status"><span class="connect-dot"></span>Checking API bindings…</p><div class="mini-note">Originals: private R2 · Previews: watermarked R2 · Gallery data: D1</div></section>
+<section class="admin-card full" id="new"><div class="kicker">Create New Shoot</div><h2>Upload once. 31 ACTION handles the rest.</h2><p>Select your finished full-resolution folder. Your browser creates smaller watermarked previews, while the original files are sent privately to Cloudflare R2.</p>
+<div class="admin-auth"><label>Admin access token<input id="admin-token" type="password" autocomplete="off" placeholder="Paste your ADMIN_TOKEN"></label><div><button class="button" id="test-token" type="button">Test Token</button><button class="button" id="remember-token" type="button">Remember for This Tab</button><button class="button" id="forget-token" type="button">Forget Token</button></div><div class="mini-note">The token is never built into the website. Use Test Token before uploading. You may paste either the raw token or a value beginning with “Bearer ”; the page will normalize it.</div></div>
+<div class="admin-form"><label>Shoot title<input id="title" placeholder="7 on 7"></label><label>Shoot date<input id="date" type="date"></label><label>Gallery status<select id="status"><option value="published">Published</option><option value="draft">Draft</option><option value="private">Private</option></select></label><label>Watermark<select id="watermark"><option value="standard">Standard — centered protection</option><option value="light">Light — subtle corner marks</option><option value="strong">Strong — repeated protection</option><option value="none">None — no watermark</option></select></label><label class="span2">Full-resolution folder<div class="upload-drop" id="drop"><input id="folder" type="file" accept="image/jpeg,image/png,image/webp" multiple webkitdirectory directory><div><strong>Drag a shoot folder here</strong><span>or click to select a folder of JPG/JPEG images</span><div class="mini-note" style="margin-top:8px">Vertical and horizontal originals keep their full aspect ratio.</div></div></div></label></div>
+<div id="upload-summary" class="mini-note" style="margin-top:12px">No folder selected.</div><div id="upload-progress" class="upload-progress" hidden><div class="upload-progress-bar"><span></span></div><div class="upload-progress-text">Waiting…</div></div><div id="preview-grid" class="preview-admin-grid"></div><div class="publish-bar"><button class="button" id="clear" type="button">Clear</button><button class="primary-btn" id="prepare" type="button">Upload & Publish Shoot</button></div></section>
+<section class="admin-card wide" id="galleries"><div class="kicker">Cloud Galleries</div><h2>Published Recent Shoots</h2><div id="gallery-list" class="access-list"><div class="mini-note">Loading…</div></div></section>
+<section class="admin-card wide" id="pricing"><div class="kicker">Digital Pricing</div><h2>Automatic package discounts</h2><p>The cart applies the best eligible package automatically.</p><table class="package-table"><tr><th>Package</th><th>Customer price</th><th>Notes</th></tr><tr><td>Single Digital</td><td>$10</td><td>Per image</td></tr><tr><td>Any 3 Digitals</td><td>$25</td><td>Automatic cart discount</td></tr><tr><td>All Photos of One Player</td><td>$35</td><td>One player / one event; team & group photos excluded</td></tr></table></section>
+<section class="admin-card" id="access"><div class="kicker">Complimentary Access</div><h2>Grant a gallery free</h2><p>Give a specific person full digital access without creating a coupon or paid order.</p><div class="admin-form" style="grid-template-columns:1fr"><label>Customer email<input id="grant-email" type="email" placeholder="parent@example.com"></label><label>Gallery<select id="grant-gallery"><option value="">Choose a published gallery</option></select></label><button id="grant" class="primary-btn" type="button">Grant Full Digital Access</button></div><div id="access-list" class="access-list"><div class="mini-note">Enter your admin token to view grants.</div></div></section>
+
+<section class="admin-card full" id="portfolio-manager">
+  <div class="kicker">Portfolio Manager</div>
+  <h2>Manage Sports, Portraits, Events & Other</h2>
+  <p>Upload finished JPGs once. Archive an image when you rotate it out, restore it later, or permanently delete it when you are sure you no longer need it online.</p><div class="visual-editor-callout"><div><strong>VISUAL PORTFOLIO EDITOR</strong><span>Edit the site in a layout view, drag photos into sequence, import existing portfolio photos, and manage homepage crops.</span></div><a class="primary-btn" href="visual-editor.html">Open Visual Editor</a></div>
+  <div class="admin-form">
+    <label>Category<select id="portfolio-category"><option value="sports">Sports</option><option value="portraits">Portraits</option><option value="events">Events</option><option value="other">Other</option></select></label>
+    <label>Status filter<select id="portfolio-filter"><option value="all">Active + Archived</option><option value="active">Active only</option><option value="archived">Archived only</option></select></label>
+    <label class="span2">Add portfolio photos<div class="upload-drop"><input id="portfolio-files" type="file" accept="image/jpeg,image/png,image/webp" multiple><div><strong>Select portfolio photographs</strong><span>Vertical and horizontal images remain uncropped in the gallery.</span></div></div></label>
+  </div>
+  <div class="publish-bar"><button class="primary-btn" id="portfolio-upload" type="button">Upload to Portfolio</button></div>
+  <div id="portfolio-progress" class="upload-progress" hidden><div class="upload-progress-bar"><span></span></div><div class="upload-progress-text"></div></div>
+  <div id="portfolio-list" class="portfolio-admin-grid"><div class="mini-note">Enter and test your Admin token to manage Cloudflare portfolio images.</div></div>
+</section>
+
+<section class="admin-card full" id="content-manager">
+  <div class="kicker">Site Content</div><h2>Edit About & Contact</h2>
+  <div class="content-editor-grid">
+    <div class="content-editor-card">
+      <h3>About Page</h3>
+      <label>Heading<input id="about-edit-heading" value="Photography that feels like you were there."></label>
+      <label>Body<textarea id="about-edit-body" rows="10">I’m Scott Henry, a Maryland-based photographer focused on sports, portraits, events and visual storytelling. I look for the split-second expression, the decisive play, the unexpected light and the small moments happening around the main event.
+
+31 ACTION comes from the idea that life happens 24 hours a day, 7 days a week. 24 + 7 = 31. The camera should be ready when the moment happens.
+
+From high-school athletics and live events to portraits, aviation and cityscapes, the goal is the same: make strong images that hold onto the feeling of the moment.</textarea></label>
+      <div class="gallery-actions"><button class="button" id="about-draft">Save Draft</button><button class="primary-btn" id="about-publish">Publish About</button></div>
+    </div>
+    <div class="content-editor-card">
+      <h3>Contact Page</h3>
+      <label>Heading<input id="contact-edit-heading" value="Be ready for the shot."></label>
+      <label>Email<input id="contact-edit-email" value="ScottHenryPhoto@aol.com"></label>
+      <label>Phone<input id="contact-edit-phone" placeholder="Business number when ready"></label>
+      <label>Instagram label<input id="contact-edit-instagram-label" value="@northcountyunofficial"></label>
+      <label>Instagram URL<input id="contact-edit-instagram-url" value="https://www.instagram.com/northcountyunofficial/"></label>
+      <label>Services<input id="contact-edit-services" value="Sports • Portraits • Events • Special projects"></label>
+      <label>Additional message<textarea id="contact-edit-note" rows="4" placeholder="Optional"></textarea></label>
+      <div class="gallery-actions"><button class="button" id="contact-draft">Save Draft</button><button class="primary-btn" id="contact-publish">Publish Contact</button></div>
+    </div>
+  </div>
+</section>
+
+<section class="admin-card full" id="pricing-manager">
+  <div class="kicker">Pricing</div><h2>Products & Digital Packages</h2>
+  <p>Change prices here. Published prices are used by the public gallery/cart without rebuilding the website.</p>
+  <div class="pricing-editor-grid">
+    <label>Digital Download $<input id="price-digital" type="number" min="0" step=".01" disabled></label>
+    <label>4 × 6 Print $<input id="price-4x6" type="number" min="0" step=".01"></label>
+    <label>5 × 7 Print $<input id="price-5x7" type="number" min="0" step=".01"></label>
+    <label>8 × 10 Print $<input id="price-8x10" type="number" min="0" step=".01"></label>
+    <label>11 × 14 Print $<input id="price-11x14" type="number" min="0" step=".01"></label>
+    <label>Any 3 Digitals $<input id="package-3" type="number" min="0" step=".01" disabled></label>
+    <label>All Photos of One Player $<input id="package-player-all" type="number" min="0" step=".01" disabled></label>
+  </div>
+  <button id="save-pricing" class="primary-btn">Publish Pricing</button>
+  <div id="pricing-status" class="mini-note"></div>
+</section>
+<section class="admin-card full"><div class="kicker">Workflow</div><h2>What this version does</h2><p>1. Creates the gallery in D1 as a draft. &nbsp; 2. Uploads each full-resolution original privately to R2. &nbsp; 3. Creates a smaller watermarked preview in your browser and uploads it to the preview bucket. &nbsp; 4. Saves each photo record in D1. &nbsp; 5. Publishes the gallery when all selected photographs finish successfully.</p></section>
+</div></main></div>
+<script src="assets/js/images.js"></script><script src="assets/js/store-config.js"></script><script src="assets/js/api-config.js"></script><script src="assets/js/site.js"></script><script>
+const inp=document.getElementById('folder'),drop=document.getElementById('drop'),grid=document.getElementById('preview-grid'),summary=document.getElementById('upload-summary'),progress=document.getElementById('upload-progress'),bar=progress.querySelector('span'),progressText=progress.querySelector('.upload-progress-text');let files=[],galleries=[];
+const tokenEl=document.getElementById('admin-token');tokenEl.value=sessionStorage.getItem('31action_admin_token')||'';
+function normalizeToken(v){return String(v||'').trim().replace(/^Bearer\s+/i,'').trim()}
+function token(){return normalizeToken(tokenEl.value)||normalizeToken(sessionStorage.getItem('31action_admin_token')||'')}
+function authHeaders(extra={}){const t=token();return Object.assign({},extra,t?{Authorization:`Bearer ${t}`}:{})}
+document.getElementById('remember-token').onclick=()=>{const t=token();if(!t)return alert('Paste your ADMIN_TOKEN first.');tokenEl.value=t;sessionStorage.setItem('31action_admin_token',t);alert('Token remembered for this browser tab only.')};
+document.getElementById('forget-token').onclick=()=>{sessionStorage.removeItem('31action_admin_token');tokenEl.value=''};
+document.getElementById('test-token').onclick=async()=>{
+  const t=token();
+  if(!t)return alert('Paste your ADMIN_TOKEN first.');
+
+  let r;
+  try{
+    r=await ActionAPI.request('/api/admin/access-grants',{headers:{Authorization:`Bearer ${t}`}});
+  }catch(e){
+    alert('Token NOT accepted. Re-copy only the secret value from where you saved it. Do not include the word Bearer.');
+    return;
+  }
+
+  tokenEl.value=t;
+  sessionStorage.setItem('31action_admin_token',t);
+  alert(`Token accepted. ${Array.isArray(r.grants)?r.grants.length:0} complimentary access grant(s) found.`);
+
+  try{
+    await renderAccess();
+    await loadRecentGalleries();
+    await loadPortfolioAdmin();
+    await loadSiteContentAdmin();
+    await loadPricingAdmin();
+  }catch(e){
+    console.error('Admin data load error:',e);
+    alert('Token accepted, but one admin section could not load. This is an API/data error, not a token error.');
+  }
+};
+
+function pad(n){return String(n).padStart(2,'0')}function parseFolder(name){const m=name.match(/^(\d{1,2})[ ._-]+(\d{1,2})[ ._-]+(\d{2,4})(?:[ ._-]+)?(.*)$/);if(!m)return null;let y=+m[3];if(y<100)y+=2000;return{date:`${y}-${pad(m[1])}-${pad(m[2])}`,title:(m[4]||'').replace(/[_-]+/g,' ').trim()}}
+function esc(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function slug(v){return String(v||'shoot').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,70)||'shoot'}
+function choose(fs){files=[...fs].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name));if(!files.length){summary.textContent='No supported photos found.';grid.innerHTML='';return}const rel=files[0].webkitRelativePath||'',folder=rel.split('/')[0]||'';const parsed=parseFolder(folder);if(parsed){document.getElementById('date').value=parsed.date;if(parsed.title)document.getElementById('title').value=parsed.title}else if(!document.getElementById('date').value){const d=new Date(files[0].lastModified);document.getElementById('date').value=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;if(folder&&!document.getElementById('title').value)document.getElementById('title').value=folder.replace(/[_-]+/g,' ')}summary.textContent=`${files.length} full-resolution photo${files.length===1?'':'s'} selected from ${folder||'this folder'}.`;grid.innerHTML='';files.slice(0,24).forEach(f=>{const u=URL.createObjectURL(f),el=document.createElement('div');el.className='preview-admin-card';el.innerHTML=`<div class="preview-admin-photo"><img src="${u}"><span class="wm-demo">31 ACTION · PREVIEW</span></div><div class="preview-admin-name">${esc(f.name)}</div>`;grid.appendChild(el)});if(files.length>24){const el=document.createElement('div');el.className='empty-state';el.textContent=`+ ${files.length-24} more photos`;grid.appendChild(el)}}
+inp.onchange=e=>choose(e.target.files);
+['dragenter','dragover'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();e.stopPropagation();drop.classList.add('drag')}));
+['dragleave'].forEach(x=>drop.addEventListener(x,e=>{e.preventDefault();e.stopPropagation();drop.classList.remove('drag')}));
+function readAllEntries(reader){return new Promise((resolve,reject)=>{const all=[];function next(){reader.readEntries(entries=>{if(!entries.length)return resolve(all);all.push(...entries);next()},reject)}next()})}
+async function entryFiles(entry,path=''){
+  if(entry.isFile){
+    return new Promise((resolve,reject)=>entry.file(file=>{
+      try{Object.defineProperty(file,'webkitRelativePath',{value:path+file.name,configurable:true})}catch(e){}
+      resolve([file])
+    },reject))
+  }
+  if(entry.isDirectory){
+    const entries=await readAllEntries(entry.createReader()), nested=[];
+    for(const child of entries) nested.push(...await entryFiles(child,path+entry.name+'/'));
+    return nested
+  }
+  return []
+}
+drop.addEventListener('drop',async e=>{
+  e.preventDefault();e.stopPropagation();drop.classList.remove('drag');
+  try{
+    const items=[...(e.dataTransfer.items||[])];
+    const entries=items.map(i=>i.webkitGetAsEntry?.()).filter(Boolean);
+    if(entries.length){
+      const fs=[];
+      for(const entry of entries) fs.push(...await entryFiles(entry,''));
+      choose(fs); return;
+    }
+    if(e.dataTransfer.files?.length) choose(e.dataTransfer.files);
+  }catch(err){
+    console.error(err);
+    if(e.dataTransfer.files?.length) choose(e.dataTransfer.files);
+    else alert('That folder could not be read by the browser. Click the upload box and choose the folder instead.');
+  }
+});
+document.getElementById('clear').onclick=()=>{files=[];inp.value='';grid.innerHTML='';summary.textContent='No folder selected.';progress.hidden=true};
+function setProgress(done,total,msg){progress.hidden=false;bar.style.width=`${total?Math.round(done/total*100):0}%`;progressText.textContent=msg}
+async function imageBitmapFor(file){if('createImageBitmap'in window)return createImageBitmap(file);return new Promise((resolve,reject)=>{const im=new Image(),u=URL.createObjectURL(file);im.onload=()=>{URL.revokeObjectURL(u);resolve(im)};im.onerror=reject;im.src=u})}
+async function makePreview(file,mode){
+  const img=await imageBitmapFor(file),max=1800,scale=Math.min(1,max/Math.max(img.width,img.height)),
+        w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale)),
+        c=document.createElement('canvas');
+  c.width=w;c.height=h;
+  const ctx=c.getContext('2d');
+  ctx.drawImage(img,0,0,w,h);
+  if(img.close)img.close();
+
+  const short='31 ACTION';
+  const full='31 ACTION · PREVIEW';
+
+  function drawStamp(text,x,y,size,alpha,angle=0){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(angle);
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.font=`900 ${size}px Arial, sans-serif`;
+    ctx.lineWidth=Math.max(1.5,size*.045);
+    ctx.strokeStyle=`rgba(0,0,0,${Math.min(.45,alpha+.10)})`;
+    ctx.fillStyle=`rgba(255,255,255,${alpha})`;
+    ctx.strokeText(text,0,0);
+    ctx.fillText(text,0,0);
+    ctx.restore();
+  }
+
+  if(mode==='light'){
+    // Two restrained corner marks, leaving the subject largely unobstructed.
+    const size=Math.max(22,Math.round(Math.min(w,h)*.045));
+    drawStamp(short,w*.18,h*.10,size,.26,0);
+    drawStamp('PREVIEW',w*.82,h*.90,size*.72,.24,0);
+  } else if(mode==='standard'){
+    // One readable center mark plus a small corner brand.
+    const size=Math.max(34,Math.round(Math.min(w,h)*.072));
+    drawStamp(full,w*.50,h*.47,size,.25,-Math.PI/18);
+    drawStamp(short,w*.82,h*.91,Math.max(20,Math.round(size*.42)),.22,0);
+  } else if(mode==='strong'){
+    // Repeated protection, but smaller and with substantially more breathing room.
+    const size=Math.max(26,Math.round(Math.min(w,h)*.048));
+    const rows=4, cols=3;
+    for(let r=0;r<rows;r++){
+      for(let col=0;col<cols;col++){
+        const x=(col+.5)*w/cols + (r%2 ? w/(cols*2) : 0);
+        if(x>w*.97) continue;
+        const y=(r+.55)*h/rows;
+        drawStamp(full,x,y,size,.20,-Math.PI/8);
+      }
+    }
+  }
+  // mode==='none' intentionally adds no watermark.
+
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.86));
+  return {blob,width:w,height:h}
+}
+async function adminRequest(path,options={}){options.headers=authHeaders(options.headers||{});return ActionAPI.request(path,options)}
+async function uploadOne(galleryId,file,index,total,mode){const safeName=file.name.replace(/[^\w.\- ]+/g,'_');setProgress(index,total,`Uploading ${index+1} of ${total}: ${file.name}`);
+const original=await adminRequest(`/api/admin/galleries/${encodeURIComponent(galleryId)}/original/${encodeURIComponent(safeName)}`,{method:'PUT',headers:{'Content-Type':file.type||'image/jpeg'},body:file});
+const preview=await makePreview(file,mode);const previewName=safeName.replace(/\.(png|webp)$/i,'.jpg');const prev=await adminRequest(`/api/admin/galleries/${encodeURIComponent(galleryId)}/preview/${encodeURIComponent(previewName)}`,{method:'PUT',headers:{'Content-Type':'image/jpeg'},body:preview.blob});
+await adminRequest('/api/admin/photos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gallery_id:galleryId,filename:file.name,original_key:original.key,preview_key:prev.key,width:preview.width,height:preview.height,sort_order:index})})}
+document.getElementById('prepare').onclick=async()=>{if(!token())return alert('Paste your ADMIN_TOKEN first.');if(!files.length)return alert('Select a shoot folder first.');const title=document.getElementById('title').value.trim()||'Untitled Shoot',date=document.getElementById('date').value,status=document.getElementById('status').value,mode=document.getElementById('watermark').value,id=`${date||new Date().toISOString().slice(0,10)}-${slug(title)}-${Date.now().toString(36).slice(-5)}`;const btn=document.getElementById('prepare');btn.disabled=true;btn.textContent='Uploading…';
+try{await adminRequest('/api/admin/galleries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,title,shoot_date:date||null,status:'draft'})});for(let i=0;i<files.length;i++)await uploadOne(id,files[i],i,files.length,mode);if(status!=='draft')await adminRequest(`/api/admin/galleries/${encodeURIComponent(id)}/status`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});setProgress(files.length,files.length,`${files.length} photos uploaded successfully. ${status==='published'?'Gallery is LIVE in Recent Shoots.':`Gallery saved as ${status}.`}`);await refreshDashboard();alert(status==='published'?`Published: ${title}`:`Saved ${status}: ${title}`)}
+catch(e){console.error(e);alert(`Upload stopped: ${e.message}\n\nAny files already uploaded remain in Cloudflare. Do not start another upload until you check the gallery/database.`)}
+finally{btn.disabled=false;btn.textContent='Upload & Publish Shoot'}};
+async function refreshDashboard(){
+  // Health and galleries are deliberately handled separately so one failure
+  // cannot leave the gallery panel stuck on "Loading...".
+  try{
+    const h=await ActionAPI.request('/api/health');
+    const ok=h.ok&&h.bindings?.originals&&h.bindings?.previews&&h.bindings?.database;
+    document.getElementById('api-status').innerHTML=`<span class="connect-dot"></span>${ok?'Cloudflare Connected':'Cloudflare Needs Attention'}`;
+    document.getElementById('storage-status').innerHTML=`<span class="connect-dot"></span>${ok?'R2 originals + previews + D1 connected':'One or more bindings unavailable'}`;
+  }catch(e){
+    document.getElementById('api-status').innerHTML='<span class="connect-dot"></span>Cloudflare API Offline';
+    document.getElementById('storage-status').innerHTML='<span class="connect-dot"></span>Could not reach api.31action.com';
+  }
+
+  await loadRecentGalleries();
+}
+
+async function loadRecentGalleries(){
+  const panel=document.getElementById('gallery-list');
+  panel.innerHTML='<div class="mini-note">Loading recent galleries…</div>';
+
+  let publicRows=[];
+  try{
+    const pub=await ActionAPI.galleries();
+    publicRows=pub.galleries||[];
+  }catch(e){
+    panel.innerHTML=`<div class="admin-error"><strong>Recent galleries could not be loaded.</strong><br>${esc(e.message||'Public gallery API unavailable.')}</div>`;
+    document.getElementById('gallery-count').innerHTML='0 <small>active galleries</small>';
+    return;
+  }
+
+  // Paint the public list immediately. Admin enrichment happens afterward.
+  galleries=publicRows.map(x=>({...x,archived_at:null,photo_count:null,_publicOnly:true}));
+  renderGalleryList(false);
+
+  // If an admin token is present, enrich the list with archived galleries,
+  // photo counts, and management controls. Failure here does NOT erase the
+  // already-working public list.
+  if(token()){
+    try{
+      const adm=await adminRequest('/api/admin/galleries');
+      if(Array.isArray(adm.galleries)){
+        galleries=adm.galleries.map(x=>({...x,_publicOnly:false}));
+        renderGalleryList(true);
+      }
+    }catch(e){
+      const warning=document.createElement('div');
+      warning.className='admin-warning';
+      warning.innerHTML=`Public galleries loaded. Admin management details could not be loaded: ${esc(e.message||'Unauthorized')}. Test your token to enable Archive/Delete.`;
+      panel.prepend(warning);
+    }
+  }
+}
+
+function renderGalleryList(adminEnabled){
+  const panel=document.getElementById('gallery-list');
+  const active=galleries.filter(x=>!x.archived_at && x.status==='published');
+  document.getElementById('gallery-count').innerHTML=`${active.length} <small>active galleries</small>`;
+
+  document.getElementById('grant-gallery').innerHTML=
+    '<option value="">Choose a published gallery</option>'+
+    active.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}${x.shoot_date?' · '+esc(x.shoot_date):''}</option>`).join('');
+
+  if(!galleries.length){
+    panel.innerHTML='<div class="mini-note">No Cloudflare galleries yet.</div>';
+    return;
+  }
+
+  panel.innerHTML=galleries.map(x=>{
+    const archived=Boolean(x.archived_at);
+    const badge=archived
+      ? '<span class="gallery-state archived">ARCHIVED</span>'
+      : `<span class="gallery-state">${esc((x.status||'published').toUpperCase())}</span>`;
+    const photoText=x.photo_count===null || x.photo_count===undefined
+      ? ''
+      : ` · ${Number(x.photo_count)} photo${Number(x.photo_count)===1?'':'s'}`;
+    return `<div class="gallery-admin-row" data-gallery-id="${esc(x.id)}">
+      <div>
+        <strong>${esc(x.title)}</strong>
+        <div class="mini-note">${esc(x.shoot_date||'No date')}${photoText} · ${badge}</div>
+      </div>
+      <div class="gallery-actions">
+        ${!archived && x.status==='published'?`<a class="button" href="shoot.html?id=${encodeURIComponent(x.id)}" target="_blank">View</a>`:''}
+        ${adminEnabled?`
+          <a class="button" href="recent-gallery-editor.html?id=${encodeURIComponent(x.id)}">Open in Editor</a>
+          <button class="button archive-gallery" type="button" data-archived="${archived?'1':'0'}">${archived?'Restore':'Archive'}</button>
+          <label class="inline-delete-check"><input class="delete-confirm-check" type="checkbox"> Confirm delete</label>
+          <button class="button danger delete-gallery" type="button">Delete</button>
+        `:'<span class="mini-note">Test token for management controls</span>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  if(adminEnabled)bindGalleryActions();
+}
+function bindGalleryActions(){
+  document.querySelectorAll('.archive-gallery').forEach(btn=>{
+    btn.onclick=async()=>{
+      if(!token())return alert('Paste and test your ADMIN_TOKEN first.');
+      const row=btn.closest('.gallery-admin-row'),id=row.dataset.galleryId,currentlyArchived=btn.dataset.archived==='1';
+      const action=currentlyArchived?'restore':'archive';
+      if(!confirm(`${action.charAt(0).toUpperCase()+action.slice(1)} this gallery?`))return;
+      try{
+        await adminRequest(`/api/admin/galleries/${encodeURIComponent(id)}/archive`,{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({archived:!currentlyArchived})
+        });
+        await refreshDashboard();
+      }catch(e){alert(e.message)}
+    }
+  });
+  document.querySelectorAll('.delete-gallery').forEach(btn=>{
+    btn.onclick=async()=>{
+      if(!token())return alert('Paste and test your ADMIN_TOKEN first.');
+      const row=btn.closest('.gallery-admin-row'),id=row.dataset.galleryId;
+      const check=row.querySelector('.delete-confirm-check');
+      if(!check?.checked){alert('Check Confirm delete first.');return}
+      if(!confirm('Permanently delete this gallery and its online photos? This cannot be undone.'))return;
+      try{
+        const result=await adminRequest(`/api/admin/galleries/${encodeURIComponent(id)}`,{
+          method:'DELETE',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({confirm:'DELETE'})
+        });
+        alert(`Gallery deleted. Removed ${result.originalsDeleted||0} original(s) and ${result.previewsDeleted||0} preview(s).`);
+        await refreshDashboard();
+      }catch(e){alert(e.message)}
+    }
+  });
+}
+async function renderAccess(){if(!token()){document.getElementById('access-list').innerHTML='<div class="mini-note">Enter your admin token to view grants.</div>';return}try{const a=await adminRequest('/api/admin/access-grants');document.getElementById('access-list').innerHTML=(a.grants||[]).map(x=>`<div class="access-chip"><span><strong>${esc(x.email)}</strong><br>${esc(x.gallery_id)}</span><span>FULL DIGITAL · $0</span></div>`).join('')||'<div class="mini-note">No complimentary access grants yet.</div>'}catch(e){document.getElementById('access-list').innerHTML='<div class="mini-note">Token not accepted or API unavailable.</div>'}}
+document.getElementById('grant').onclick=async()=>{const email=document.getElementById('grant-email').value.trim(),gallery=document.getElementById('grant-gallery').value;if(!token())return alert('Paste your ADMIN_TOKEN first.');if(!email||!gallery)return alert('Enter an email and choose a gallery.');try{await adminRequest('/api/admin/access-grants',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,gallery_id:gallery,access_type:'full_digital'})});document.getElementById('grant-email').value='';await renderAccess();alert('Complimentary gallery access granted.')}catch(e){alert(e.message)}};
+
+let portfolioItems=[];
+
+async function createPlainPreview(file){
+  const img=await imageBitmapFor(file),max=2200,scale=Math.min(1,max/Math.max(img.width,img.height)),
+        w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale)),
+        c=document.createElement('canvas');c.width=w;c.height=h;
+  c.getContext('2d').drawImage(img,0,0,w,h);if(img.close)img.close();
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.90));return {blob,width:w,height:h}
+}
+function portfolioProgress(done,total,msg){
+  const p=document.getElementById('portfolio-progress');p.hidden=false;
+  p.querySelector('span').style.width=`${total?Math.round(done/total*100):0}%`;
+  p.querySelector('.upload-progress-text').textContent=msg;
+}
+async function loadPortfolioAdmin(){
+  if(!token())return;
+  try{const d=await adminRequest('/api/admin/portfolio');portfolioItems=d.items||[];renderPortfolioAdmin()}
+  catch(e){document.getElementById('portfolio-list').innerHTML=`<div class="mini-note">${esc(e.message)}</div>`}
+}
+function renderPortfolioAdmin(){
+  const filter=document.getElementById('portfolio-filter').value,cat=document.getElementById('portfolio-category').value;
+  const a=portfolioItems.filter(x=>x.category===cat && (filter==='all'||x.status===filter));
+  document.getElementById('portfolio-list').innerHTML=a.length?a.map((x,i)=>`
+    <article class="portfolio-admin-card" data-id="${esc(x.id)}">
+      <div class="portfolio-admin-photo"><img src="${ActionAPI.base()+x.preview_url}" alt=""></div>
+      <div class="portfolio-admin-body">
+        <strong>${esc(x.filename)}</strong>
+        <div class="mini-note">${esc(x.category)} · ${esc(x.status)}${x.home_enabled?' · HOME':''}</div>
+        <label>Category<select class="po-category">${['sports','portraits','events','other'].map(c=>`<option ${c===x.category?'selected':''} value="${c}">${c}</option>`).join('')}</select></label>
+        <label><input class="po-home" type="checkbox" ${x.home_enabled?'checked':''}> Include in homepage slideshow</label>
+        <div class="gallery-actions">
+          <button class="button po-up" type="button">↑</button><button class="button po-down" type="button">↓</button>
+          <button class="button po-save" type="button">Save</button>
+          <button class="button po-crop" type="button">Home Crop</button>
+          <button class="button po-archive" type="button">${x.status==='archived'?'Restore':'Archive'}</button>
+          <button class="button danger po-delete" type="button">Delete</button>
+        </div>
+      </div>
+    </article>`).join(''):'<div class="mini-note">No Cloudflare portfolio images match this category/filter yet. Your existing static images remain live as the fallback.</div>';
+  bindPortfolioCards();
+}
+function bindPortfolioCards(){
+  document.querySelectorAll('.portfolio-admin-card').forEach(card=>{
+    const id=card.dataset.id,x=portfolioItems.find(p=>p.id===id);if(!x)return;
+    card.querySelector('.po-crop').onclick=()=>openCrop(x);
+    card.querySelector('.po-save').onclick=async()=>{await adminRequest(`/api/admin/portfolio/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:card.querySelector('.po-category').value,home_enabled:card.querySelector('.po-home').checked})});await loadPortfolioAdmin()};
+    card.querySelector('.po-archive').onclick=async()=>{await adminRequest(`/api/admin/portfolio/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:x.status==='archived'?'active':'archived'})});await loadPortfolioAdmin()};
+    card.querySelector('.po-delete').onclick=async()=>{if(prompt('Type DELETE to permanently remove this portfolio image from Cloudflare.')!=='DELETE')return;await adminRequest(`/api/admin/portfolio/${encodeURIComponent(id)}`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:'DELETE'})});await loadPortfolioAdmin()};
+    card.querySelector('.po-up').onclick=async()=>{await adminRequest(`/api/admin/portfolio/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({sort_order:Number(x.sort_order||0)-10,home_order:Number(x.home_order||0)-10})});await loadPortfolioAdmin()};
+    card.querySelector('.po-down').onclick=async()=>{await adminRequest(`/api/admin/portfolio/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({sort_order:Number(x.sort_order||0)+10,home_order:Number(x.home_order||0)+10})});await loadPortfolioAdmin()};
+  })
+}
+document.getElementById('portfolio-category').addEventListener('change',renderPortfolioAdmin);
+document.getElementById('portfolio-filter').addEventListener('change',renderPortfolioAdmin);
+document.getElementById('portfolio-upload').onclick=async()=>{
+  if(!token())return alert('Test your Admin token first.');
+  const fs=[...document.getElementById('portfolio-files').files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name));
+  if(!fs.length)return alert('Choose at least one portfolio photograph.');
+  const category=document.getElementById('portfolio-category').value;
+  try{
+    for(let i=0;i<fs.length;i++){
+      const f=fs[i],id=`portfolio-${Date.now().toString(36)}-${i}-${Math.random().toString(36).slice(2,7)}`,
+            safeName=f.name.replace(/[^\w.\- ]+/g,'_');
+      portfolioProgress(i,fs.length,`Uploading ${i+1} of ${fs.length}: ${f.name}`);
+      const orig=await adminRequest(`/api/admin/portfolio/${encodeURIComponent(id)}/original/${encodeURIComponent(safeName)}`,{method:'PUT',headers:{'Content-Type':f.type||'image/jpeg'},body:f});
+      const pr=await createPlainPreview(f),previewName=safeName.replace(/\.(png|webp)$/i,'.jpg');
+      const prev=await adminRequest(`/api/admin/portfolio/${encodeURIComponent(id)}/preview/${encodeURIComponent(previewName)}`,{method:'PUT',headers:{'Content-Type':'image/jpeg'},body:pr.blob});
+      await adminRequest('/api/admin/portfolio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,category,filename:f.name,original_key:orig.key,preview_key:prev.key,sort_order:(portfolioItems.filter(x=>x.category===category).length+i)*10})});
+    }
+    portfolioProgress(fs.length,fs.length,`${fs.length} portfolio photo${fs.length===1?'':'s'} uploaded.`);
+    document.getElementById('portfolio-files').value='';await loadPortfolioAdmin();alert('Portfolio upload complete.');
+  }catch(e){alert('Portfolio upload stopped: '+e.message)}
+};
+
+async function loadSiteContentAdmin(){
+  if(!token())return;
+  try{
+    const d=await adminRequest('/api/admin/site-content');
+    const map={};(d.sections||[]).forEach(x=>map[x.section]=x);
+    const a=map.about?.draft||map.about?.published;if(a){if(a.heading)document.getElementById('about-edit-heading').value=a.heading;if(a.body)document.getElementById('about-edit-body').value=a.body}
+    const c=map.contact?.draft||map.contact?.published;if(c){
+      if(c.heading)document.getElementById('contact-edit-heading').value=c.heading;
+      if(c.email)document.getElementById('contact-edit-email').value=c.email;
+      if(c.phone)document.getElementById('contact-edit-phone').value=c.phone;
+      if(c.instagram_label)document.getElementById('contact-edit-instagram-label').value=c.instagram_label;
+      if(c.instagram_url)document.getElementById('contact-edit-instagram-url').value=c.instagram_url;
+      if(c.services)document.getElementById('contact-edit-services').value=c.services;
+      if(c.note)document.getElementById('contact-edit-note').value=c.note;
+    }
+  }catch(e){}
+}
+function aboutData(){return {heading:document.getElementById('about-edit-heading').value.trim(),body:document.getElementById('about-edit-body').value.trim()}}
+function contactData(){return {heading:document.getElementById('contact-edit-heading').value.trim(),email:document.getElementById('contact-edit-email').value.trim(),phone:document.getElementById('contact-edit-phone').value.trim(),instagram_label:document.getElementById('contact-edit-instagram-label').value.trim(),instagram_url:document.getElementById('contact-edit-instagram-url').value.trim(),services:document.getElementById('contact-edit-services').value.trim(),note:document.getElementById('contact-edit-note').value.trim()}}
+async function saveContent(section,action,data){
+  if(!token())return alert('Test your Admin token first.');
+  try{await adminRequest(`/api/admin/site-content/${section}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,data})});alert(action==='publish'?`${section} page published.`:`${section} draft saved.`)}
+  catch(e){alert(e.message)}
+}
+document.getElementById('about-draft').onclick=()=>saveContent('about','draft',aboutData());
+document.getElementById('about-publish').onclick=()=>saveContent('about','publish',aboutData());
+document.getElementById('contact-draft').onclick=()=>saveContent('contact','draft',contactData());
+document.getElementById('contact-publish').onclick=()=>saveContent('contact','publish',contactData());
+
+
+const cropModal=document.getElementById('home-crop-modal'),cropStage=document.getElementById('crop-stage'),cropBox=document.getElementById('crop-box'),
+      cropImg=document.getElementById('crop-image'),cropExcluded=document.getElementById('crop-excluded');
+let cropItem=null,cropDevice='desktop',cropState={desktop:null,mobile:null},cropDrag=null;
+
+function defaultCrop(device){return device==='mobile'?{x:22,y:4,w:56,h:92,excluded:false}:{x:0,y:9,w:100,h:72,excluded:false}}
+function currentCrop(){return cropState[cropDevice]||defaultCrop(cropDevice)}
+function setCurrentCrop(v){cropState[cropDevice]={...v}}
+function renderCropBox(){
+  const c=currentCrop();
+  cropBox.style.left=c.x+'%';cropBox.style.top=c.y+'%';cropBox.style.width=c.w+'%';cropBox.style.height=c.h+'%';
+  cropBox.style.display=c.excluded?'none':'block';cropExcluded.checked=!!c.excluded;
+}
+function openCrop(x){
+  cropItem=x;cropDevice='desktop';
+  cropState={desktop:x.crop_desktop||defaultCrop('desktop'),mobile:x.crop_mobile||defaultCrop('mobile')};
+  cropImg.src=ActionAPI.base()+x.preview_url;
+  document.getElementById('crop-modal-title').textContent=x.filename;
+  cropModal.hidden=false;document.body.style.overflow='hidden';
+  document.querySelectorAll('.crop-device-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.device==='desktop'));
+  renderCropBox();
+}
+function closeCrop(){cropModal.hidden=true;document.body.style.overflow='';cropItem=null}
+document.getElementById('crop-modal-close').onclick=closeCrop;
+cropModal.addEventListener('click',e=>{if(e.target===cropModal)closeCrop()});
+document.querySelectorAll('.crop-device-tabs button').forEach(b=>b.onclick=()=>{cropDevice=b.dataset.device;document.querySelectorAll('.crop-device-tabs button').forEach(x=>x.classList.toggle('active',x===b));renderCropBox()});
+cropExcluded.onchange=()=>{const c=currentCrop();c.excluded=cropExcluded.checked;setCurrentCrop(c);renderCropBox()};
+document.getElementById('crop-reset').onclick=()=>{setCurrentCrop(defaultCrop(cropDevice));renderCropBox()};
+
+function pointPct(e){
+  const r=cropStage.getBoundingClientRect(),p=e.touches?e.touches[0]:e;
+  return {x:(p.clientX-r.left)/r.width*100,y:(p.clientY-r.top)/r.height*100}
+}
+cropBox.addEventListener('pointerdown',e=>{
+  e.preventDefault();const c=currentCrop(),p=pointPct(e),resize=e.target.classList.contains('crop-handle');
+  cropDrag={resize,start:p,orig:{...c}};cropBox.setPointerCapture?.(e.pointerId);
+});
+window.addEventListener('pointermove',e=>{
+  if(!cropDrag)return;const p=pointPct(e),dx=p.x-cropDrag.start.x,dy=p.y-cropDrag.start.y,o=cropDrag.orig;
+  let n={...o};
+  if(cropDrag.resize){n.w=Math.max(12,Math.min(100-o.x,o.w+dx));n.h=Math.max(12,Math.min(100-o.y,o.h+dy))}
+  else{n.x=Math.max(0,Math.min(100-o.w,o.x+dx));n.y=Math.max(0,Math.min(100-o.h,o.y+dy))}
+  setCurrentCrop(n);renderCropBox();
+});
+window.addEventListener('pointerup',()=>cropDrag=null);
+document.getElementById('crop-save').onclick=async()=>{
+  if(!cropItem)return;
+  try{
+    await adminRequest(`/api/admin/portfolio/${encodeURIComponent(cropItem.id)}`,{
+      method:'PATCH',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({crop_desktop:cropState.desktop||defaultCrop('desktop'),crop_mobile:cropState.mobile||defaultCrop('mobile')})
+    });
+    closeCrop();await loadPortfolioAdmin();alert('Homepage crop saved.');
+  }catch(e){alert(e.message)}
+};
+
+
+let currentPricing=null;
+function defaultPricing(){
+  return {
+    currency:'USD',
+    products:[
+      {id:'digital',label:'Digital Download',price:10,requiresShipping:false},
+      {id:'print_4x6',label:'4 × 6 Print',price:8,requiresShipping:true},
+      {id:'print_5x7',label:'5 × 7 Print',price:12,requiresShipping:true},
+      {id:'print_8x10',label:'8 × 10 Print',price:20,requiresShipping:true},
+      {id:'print_11x14',label:'11 × 14 Print',price:32,requiresShipping:true}
+    ],
+    packages:[{quantity:3,price:25,label:'Any 3 Digitals'},{type:'player_all',price:35,label:'All Photos of One Player',exclude_team_photos:true}]
+  }
+}
+function productPrice(id){return currentPricing?.products?.find(x=>x.id===id)?.price}
+function packagePrice(q){return currentPricing?.packages?.find(x=>Number(x.quantity)===q)?.price}
+function playerPackagePrice(){return currentPricing?.packages?.find(x=>x.type==='player_all')?.price}
+function fillPricing(){
+  const p=currentPricing||defaultPricing();
+  document.getElementById('price-digital').value=10;
+  document.getElementById('price-4x6').value=productPrice('print_4x6')??8;
+  document.getElementById('price-5x7').value=productPrice('print_5x7')??12;
+  document.getElementById('price-8x10').value=productPrice('print_8x10')??20;
+  document.getElementById('price-11x14').value=productPrice('print_11x14')??32;
+  document.getElementById('package-3').value=25;
+  document.getElementById('package-player-all').value=35;
+}
+async function loadPricingAdmin(){
+  try{const d=await adminRequest('/api/admin/pricing');currentPricing=d.pricing||defaultPricing();fillPricing()}
+  catch(e){currentPricing=defaultPricing();fillPricing()}
+}
+document.getElementById('save-pricing').onclick=async()=>{
+  if(!token())return alert('Test your Admin token first.');
+  const p=defaultPricing();
+  const vals={
+    digital:10,
+    print_4x6:+document.getElementById('price-4x6').value,
+    print_5x7:+document.getElementById('price-5x7').value,
+    print_8x10:+document.getElementById('price-8x10').value,
+    print_11x14:+document.getElementById('price-11x14').value
+  };
+  p.products=p.products.map(x=>({...x,price:Number(vals[x.id]??x.price)}));
+  p.packages=[
+    {quantity:3,price:25,label:'Any 3 Digitals'},
+    {type:'player_all',price:35,label:'All Photos of One Player',exclude_team_photos:true}
+  ];
+  try{await adminRequest('/api/admin/pricing',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({pricing:p})});currentPricing=p;document.getElementById('pricing-status').textContent='Pricing published.'}
+  catch(e){document.getElementById('pricing-status').textContent=e.message}
+};
+
+tokenEl.addEventListener('change',renderAccess);document.getElementById('order-count').innerHTML=`${(window.TestOrders?.get?.()||[]).length} <small>test orders</small>`;refreshDashboard().then(async()=>{await renderAccess();if(token()){await loadPortfolioAdmin();await loadSiteContentAdmin();await loadPricingAdmin()}});
+</script>
+<div id="home-crop-modal" class="crop-modal" hidden>
+  <div class="crop-modal-panel">
+    <div class="crop-modal-head"><div><div class="kicker">Homepage Crop</div><h2 id="crop-modal-title">Adjust Crop</h2></div><button id="crop-modal-close" class="button" type="button">Close</button></div>
+    <div class="crop-device-tabs"><button class="button active" data-device="desktop">Desktop</button><button class="button" data-device="mobile">Phone</button></div>
+    <p class="mini-note">Drag the white box to choose the visible area. Drag the red handle to resize it. This affects the homepage only; the Portfolio gallery always shows the complete photograph.</p>
+    <div id="crop-stage" class="crop-stage"><img id="crop-image" alt=""><div id="crop-box" class="crop-box"><span class="crop-handle"></span></div></div>
+    <label class="crop-exclude"><input id="crop-excluded" type="checkbox"> Exclude this photo from the selected device</label>
+    <div class="publish-bar"><button id="crop-reset" class="button" type="button">Reset</button><button id="crop-save" class="primary-btn" type="button">Save Homepage Crop</button></div>
+  </div>
+</div>
+</body></html>

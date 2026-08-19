@@ -1,0 +1,212 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>31 ACTION | Photography by Scott Henry</title><link rel="stylesheet" href="assets/css/styles.css"></head><body class="home-page"><header class="site-header"><a class="brand" href="index.html"><span class="brand-main"><span class="n">31</span><span class="a">ACTION</span></span><span class="brand-sub">PHOTOGRAPHY BY SCOTT HENRY</span></a><button class="menu-btn">MENU</button><nav class="main-nav"><a class="active" href="index.html">Home</a><a class="" href="work.html">Portfolio</a><a class="" href="reels.html">Reels</a><a class="" href="recent-shoots.html">Recent Events</a><a class="" href="about.html">About</a><a class="" href="contact.html">Contact</a><a class="player-link" href="player.html">Player / Client Login</a><a class="cart-link" href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a class="instagram instagram-link" href="https://www.instagram.com/northcountyunofficial/" target="_blank" rel="noopener" aria-label="Instagram">
+<svg class="instagram-icon" viewBox="0 0 24 24" aria-hidden="true">
+<rect x="3" y="3" width="18" height="18" rx="5" ry="5"></rect>
+<circle cx="12" cy="12" r="4.2"></circle>
+<circle cx="17.4" cy="6.7" r="1.05" class="ig-dot"></circle>
+</svg>
+<span>Instagram</span></a></nav></header><section class="hero"><div id="slides"></div><div class="hero-content"><div class="hero-logo"><span class="num">31</span><span class="action">ACTION</span></div><div class="hero-rule"></div><div class="tagline">Life happens 24/7.<br>Be ready for the shot.</div><div class="equation"><strong>24</strong> Hours a Day + <strong>7</strong> Days a Week = <strong>31 Action</strong></div><div class="script">Photography by Scott Henry</div></div></section><section class="category-strip home-purpose-strip">
+<a class="cat-card home-purpose-card simple-purpose-card" href="work.html">
+  <img id="home-cover-portfolio" data-crop-src="images/sports/049A9822.jpg" src="images/sports/049A9822.jpg" alt="">
+  <div class="cat-overlay simple-purpose-overlay">
+    <div class="purpose-kicker">VIEW MY</div>
+    <div class="purpose-title">PORTFOLIO</div>
+    <div class="red-rule"></div>
+  </div>
+</a>
+<a class="cat-card home-purpose-card home-purpose-primary simple-purpose-card" href="recent-shoots.html">
+  <img id="home-cover-recent" data-crop-src="images/events/049A2656.jpg" src="images/events/049A2656.jpg" alt="">
+  <div class="cat-overlay simple-purpose-overlay">
+    <div class="purpose-kicker">FIND YOUR</div>
+    <div class="purpose-title">RECENT EVENTS</div>
+    <div class="red-rule"></div>
+  </div>
+</a>
+<a class="cat-card home-purpose-card simple-purpose-card" href="other.html">
+  <img id="home-cover-shop" data-crop-src="images/other/1F1A8141.jpg" src="images/other/1F1A8141.jpg" alt="">
+  <div class="cat-overlay simple-purpose-overlay">
+    <div class="purpose-kicker">SHOP OTHER</div>
+    <div class="purpose-title">WORK FOR SALE</div>
+    <div class="red-rule"></div>
+  </div>
+</a>
+</section><footer class="site-footer"><a class="footer-brand" href="index.html"><span class="n">31</span><span class="a">ACTION</span></a><nav class="footer-nav"><a href="index.html">Home</a><a href="work.html">Portfolio</a><a href="reels.html">Reels</a><a href="recent-shoots.html">Recent Events</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="player.html">Player / Client Login</a><a href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a href="admin-gate.html" style="color:#555">Admin</a></nav></footer><script src="assets/js/images.js"></script><script src="assets/js/crops.js"></script><script src="assets/js/api-config.js"></script><script src="assets/js/portfolio-api.js"></script><script>
+(async function(){
+  const root=document.getElementById('slides');
+  if(!root)return;
+
+  const hero=root.closest('.hero');
+  root.style.position='absolute';
+  root.style.left='0';
+  root.style.top='0';
+  root.style.width='100%';
+  root.style.height='100%';
+  root.style.inset='0';
+
+  // If Chrome still reports percentage sizing late, pin the current
+  // rendered hero dimensions in pixels and refresh them on resize.
+  const sizeRoot=()=>{
+    const r=hero?.getBoundingClientRect?.();
+    if(r?.width>0 && r?.height>0){
+      root.style.width=Math.round(r.width)+'px';
+      root.style.height=Math.round(r.height)+'px';
+    }
+  };
+  sizeRoot();
+  window.addEventListener('resize',sizeRoot);
+
+  const bundled=(window.SITE_IMAGES?.landing||[]).map(x=>String(x).replace(/\\/g,'/'));
+
+  function makeVisibleSlide(src,duration,active){
+    const div=document.createElement('div');
+    div.className='hero-slide'+(active?' active':'');
+    div.dataset.duration=String(duration||5200);
+
+    // Force an explicit full-size destination for crop rendering.
+    div.style.position='absolute';
+    div.style.left='0';
+    div.style.top='0';
+    div.style.width='100%';
+    div.style.height='100%';
+    div.style.inset='0';
+
+    // Immediate safety image. The homepage can never be blank while the
+    // exact crop renderer waits for layout/image dimensions.
+    div.style.backgroundColor='#000';
+    div.style.backgroundImage=`url("${src}")`;
+    div.style.backgroundRepeat='no-repeat';
+    div.style.backgroundPosition='center';
+    div.style.backgroundSize='cover';
+
+    root.appendChild(div);
+    return div;
+  }
+
+  function bundledFallback(){
+    root.innerHTML='';
+    bundled.forEach((src,i)=>makeVisibleSlide(src,5200,i===0));
+    window.dispatchEvent(new CustomEvent('hero:rebuilt'));
+  }
+
+  try{
+    const data=await ActionAPI.landingSlides();
+    const records=Array.isArray(data?.slides)?data.slides:[];
+    const mobile=window.matchMedia('(max-width:620px)').matches;
+
+    if(!records.length){
+      bundledFallback();
+      return;
+    }
+
+    root.innerHTML='';
+    const jobs=[];
+    let rendered=0;
+
+    for(const s of records){
+      const crop=mobile?s.crop_mobile:s.crop_desktop;
+      if(crop?.excluded)continue;
+
+      const src=s.source_kind==='static'
+        ? String(s.source_path||'').replace(/\\/g,'/')
+        : (s.preview_url?ActionAPI.base()+s.preview_url:'');
+
+      if(!src)continue;
+
+      const div=makeVisibleSlide(src,s.duration_ms,rendered===0);
+      rendered++;
+
+      const img=document.createElement('img');
+      img.className='hero-slide-image';
+      img.alt=s.alt_text||'';
+      img.style.opacity='0';
+      div.appendChild(img);
+
+      // Apply the exact saved crop only after the destination has dimensions.
+      // Until successful, the inline background image remains visible.
+      const effectiveCrop=crop||{x:0,y:0,w:100,h:100,excluded:false};
+
+      // Always render the exact saved rectangle with containment.
+      // A full-image crop shows full bars, an intermediate crop shows
+      // partial bars, and a frame-shaped crop naturally fills the hero.
+      const job=ActionPortfolio.renderCropInto(
+        img,
+        {src},
+        effectiveCrop,
+        true
+      ).then(ok=>{
+        if(ok){
+          img.style.opacity='1';
+          div.style.backgroundImage='none';
+        }
+      }).catch(err=>{
+        console.warn('Using safe hero fallback for',src,err);
+        img.remove();
+      });
+
+      jobs.push(job);
+    }
+
+    if(rendered===0){
+      bundledFallback();
+      return;
+    }
+
+    [...root.querySelectorAll('.hero-slide')].forEach((slide,i)=>{
+      slide.classList.toggle('active',i===0);
+    });
+
+    // Start slideshow immediately using safe visible backgrounds.
+    window.dispatchEvent(new CustomEvent('hero:rebuilt'));
+
+    // Exact crop layers may finish a moment later. They replace the safe
+    // background independently without interrupting slideshow timing.
+    Promise.allSettled(jobs).then(()=>{
+      window.dispatchEvent(new CustomEvent('hero:rebuilt'));
+    });
+
+  }catch(e){
+    console.error('Landing slideshow API failed:',e);
+    bundledFallback();
+  }
+})();
+</script>
+<script>
+(async function(){
+  const mobile=window.matchMedia('(max-width:620px)').matches;
+  const tiles=[
+    {id:'home-cover-portfolio',category:'sports'},
+    {id:'home-cover-recent',category:'events'},
+    {id:'home-cover-shop',category:'other'}
+  ];
+  for(const tile of tiles){
+    try{
+      ActionPortfolio._legacy=null;
+      const items=await ActionPortfolio.items(tile.category);
+      const first=items[0];
+      const img=document.getElementById(tile.id);
+      if(first&&img)ActionPortfolio.applyCover(img,first,mobile);
+    }catch(e){}
+  }
+})();
+</script>
+<script src="assets/js/store-config.js"></script><script src="assets/js/site.js"></script><script src="assets/js/seo.js"></script>
+<script>
+(function(){
+  const link=[...document.querySelectorAll('a[href="player.html"]')].find(a=>a.closest('.main-nav')) || document.querySelector('a[href="player.html"]');
+  if(!link||!window.ActionAPI)return;
+  ActionAPI.request('/api/auth/me').then(me=>{
+    if(!me?.logged_in)return;
+    return ActionAPI.request('/api/account/notifications');
+  }).then(d=>{
+    if(!d?.unread_count)return;
+    let badge=link.querySelector('.account-notification-badge');
+    if(!badge){
+      badge=document.createElement('span');
+      badge.className='account-notification-badge';
+      link.appendChild(badge);
+    }
+    badge.textContent=String(Math.min(99,Number(d.unread_count)||0));
+  }).catch(()=>{});
+})();
+</script>
+
+</body></html>

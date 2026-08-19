@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cart | 31 ACTION</title><link rel="stylesheet" href="assets/css/styles.css"></head>
+<body>
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-main"><span class="n">31</span><span class="a">ACTION</span></span><span class="brand-sub">PHOTOGRAPHY BY SCOTT HENRY</span></a><button class="menu-btn">MENU</button><nav class="main-nav"><a class="" href="index.html">Home</a><a class="" href="work.html">Portfolio</a><a class="" href="reels.html">Reels</a><a class="" href="recent-shoots.html">Recent Events</a><a class="" href="about.html">About</a><a class="" href="contact.html">Contact</a><a class="player-link" href="player.html">Player / Client Login</a><a class="cart-link" href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a class="instagram instagram-link" href="https://www.instagram.com/northcountyunofficial/" target="_blank" rel="noopener" aria-label="Instagram">
+<svg class="instagram-icon" viewBox="0 0 24 24" aria-hidden="true">
+<rect x="3" y="3" width="18" height="18" rx="5" ry="5"></rect>
+<circle cx="12" cy="12" r="4.2"></circle>
+<circle cx="17.4" cy="6.7" r="1.05" class="ig-dot"></circle>
+</svg>
+<span>Instagram</span></a></nav></header>
+
+<main class="confirmation-page">
+  <section class="confirmation-shell">
+    <div id="confirmation-loading" class="confirmation-card confirmation-loading">
+      <div class="confirmation-check">✓</div>
+      <p class="eyebrow">31 ACTION PHOTOGRAPHY</p>
+      <h1>Confirming Your Order</h1>
+      <p>We received your Stripe payment. We’re matching it to your 31 ACTION order now.</p>
+      <div class="confirmation-pulse" aria-hidden="true"></div>
+    </div>
+
+    <div id="confirmation-error" class="confirmation-card" hidden>
+      <div class="confirmation-check confirmation-check-warn">!</div>
+      <p class="eyebrow">ORDER STATUS</p>
+      <h1>We’re Still Confirming It</h1>
+      <p id="confirmation-error-message">Your payment may still be processing.</p>
+      <div class="confirmation-actions">
+        <button id="confirmation-retry" class="primary-btn" type="button">Check Again</button>
+        <a class="button" href="cart.html">Return to Cart</a>
+      </div>
+    </div>
+
+    <div id="confirmation-success" class="confirmation-card" hidden>
+      <div class="confirmation-check">✓</div>
+      <p class="eyebrow">PAYMENT CONFIRMED</p>
+      <h1>Thank You</h1>
+      <p class="confirmation-lead">Your 31 ACTION order has been received and payment is confirmed.</p>
+
+      <div class="confirmation-order-number">
+        <span>Order Number</span>
+        <strong id="confirmation-order-id"></strong>
+      </div>
+
+      <div class="confirmation-summary">
+        <div><span>Status</span><strong id="confirmation-status">Paid</strong></div>
+        <div><span>Subtotal</span><strong id="confirmation-subtotal"></strong></div>
+        <div id="confirmation-discount-row"><span>Discount</span><strong id="confirmation-discount"></strong></div>
+        <div id="confirmation-shipping-row"><span>Shipping</span><strong id="confirmation-shipping"></strong></div>
+        <div id="confirmation-tax-row"><span>Tax</span><strong id="confirmation-tax"></strong></div>
+        <div class="confirmation-total"><span>Total Paid</span><strong id="confirmation-total"></strong></div>
+      </div>
+
+      <section class="confirmation-items-wrap">
+        <h2>Your Order</h2>
+        <div id="confirmation-items" class="confirmation-items"></div>
+      </section>
+
+      <div id="confirmation-fulfillment-note" class="confirmation-note"></div>
+
+      <div class="confirmation-actions">
+        <a class="primary-btn" href="recent-shoots.html">Back to Recent Shoots</a>
+        <a class="button" href="index.html">Home</a>
+      </div>
+
+      <p class="confirmation-small">Keep your order number for your records.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer"><a class="footer-brand" href="index.html"><span class="n">31</span><span class="a">ACTION</span></a><nav class="footer-nav"><a href="index.html">Home</a><a href="work.html">Portfolio</a><a href="reels.html">Reels</a><a href="recent-shoots.html">Recent Events</a><a href="about.html">About</a><a href="contact.html">Contact</a><a href="player.html">Player / Client Login</a><a href="cart.html">Cart <span class="cart-count" hidden>0</span></a><a href="admin-gate.html" style="color:#555">Admin</a></nav></footer>
+<script src="assets/js/crops.js"></script>
+<script src="assets/js/api-config.js"></script>
+<script src="assets/js/store-config.js"></script>
+<script src="assets/js/site.js"></script>
+
+<script>
+(function(){
+  const params=new URLSearchParams(location.search);
+  const sessionId=params.get('session_id')||'';
+  const loading=document.getElementById('confirmation-loading');
+  const success=document.getElementById('confirmation-success');
+  const errorBox=document.getElementById('confirmation-error');
+  const errorMsg=document.getElementById('confirmation-error-message');
+  const retry=document.getElementById('confirmation-retry');
+
+  const money=cents=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format((Number(cents)||0)/100);
+
+  function show(which){
+    loading.hidden=which!=='loading';
+    success.hidden=which!=='success';
+    errorBox.hidden=which!=='error';
+  }
+
+  function esc(v){
+    return String(v??'')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function renderOrder(order){
+    document.getElementById('confirmation-order-id').textContent=order.id||'';
+    document.getElementById('confirmation-status').textContent=
+      String(order.status||'paid').toUpperCase();
+
+    document.getElementById('confirmation-subtotal').textContent=money(order.subtotal_cents);
+    document.getElementById('confirmation-discount').textContent=
+      Number(order.discount_cents)>0?`−${money(order.discount_cents)}`:money(0);
+    document.getElementById('confirmation-shipping').textContent=money(order.shipping_cents);
+    document.getElementById('confirmation-tax').textContent=money(order.tax_cents);
+    document.getElementById('confirmation-total').textContent=money(order.total_cents);
+
+    document.getElementById('confirmation-discount-row').hidden=!Number(order.discount_cents);
+    document.getElementById('confirmation-shipping-row').hidden=!Number(order.shipping_cents);
+    document.getElementById('confirmation-tax-row').hidden=!Number(order.tax_cents);
+
+    const items=Array.isArray(order.items)?order.items:[];
+    const downloads=Array.isArray(order.digital_downloads)?order.digital_downloads:[];
+    const downloadByItem=new Map(downloads.map(d=>[String(d.order_item_id),d]));
+    const downloadByPhoto=new Map(downloads.map(d=>[String(d.photo_id),d]));
+    const box=document.getElementById('confirmation-items');
+
+    box.innerHTML=items.length
+      ?items.map(item=>{
+        const d=downloadByItem.get(String(item.id||item.order_item_id||'')) ||
+          downloadByPhoto.get(String(item.photo_id||''));
+        const downloadHtml=(item.product_id==='digital' && d?.download_url)
+          ?`<a class="confirmation-download-btn" href="${esc(d.download_url)}">
+              DOWNLOAD HIGH-RESOLUTION FILE
+            </a>
+            <span class="confirmation-download-expiry">
+              Available until ${new Date(d.expires_at).toLocaleDateString()}
+            </span>`
+          :'';
+
+        return `
+          <article class="confirmation-item">
+            <div class="confirmation-item-main">
+              <div>
+                <strong>${esc(item.product_label||item.product_id||'Photo')}</strong>
+                <span>${esc(item.filename||'')}</span>
+              </div>
+              ${downloadHtml}
+            </div>
+            <div class="confirmation-item-price">
+              <span>Qty ${Number(item.quantity)||1}</span>
+              <strong>${money((Number(item.unit_cents)||0)*(Number(item.quantity)||1))}</strong>
+            </div>
+          </article>
+        `;
+      }).join('')
+      :'<p>Order items are being prepared.</p>';
+
+    const hasPrint=items.some(x=>x.requires_shipping);
+    const hasDigital=items.some(x=>x.product_id==='digital');
+    const fulfillmentStatus=String(order.fulfillment_status||'').toLowerCase();
+
+    let note='';
+    if(hasPrint && fulfillmentStatus==='submitted'){
+      note=hasDigital
+        ?'<strong>Your digital photos are ready above.</strong> Your print order has been sent to our print lab for fulfillment.'
+        :'<strong>Your print order has been sent to our print lab for fulfillment.</strong>';
+    }else if(hasPrint && fulfillmentStatus==='failed'){
+      note=hasDigital
+        ?'<strong>Your digital photos are ready above.</strong> We received your print order, but fulfillment needs review. No action is needed from you right now.'
+        :'<strong>We received your print order.</strong> Fulfillment needs review. No action is needed from you right now.';
+    }else if(hasDigital&&hasPrint){
+      note='<strong>Your digital photos are ready above.</strong> Your print order has been received and is being prepared for fulfillment.';
+    }else if(hasPrint){
+      note='<strong>Your print order has been received and is being prepared for fulfillment.</strong>';
+    }else if(hasDigital){
+      note='<strong>Your digital photos are ready.</strong> Use the download button above anytime during the 30-day download period.';
+    }else{
+      note='<strong>Your order is recorded.</strong>';
+    }
+    document.getElementById('confirmation-fulfillment-note').innerHTML=note;
+
+    // Clear cart ONLY after the backend confirms a paid order exists.
+    try{
+      if(window.Cart && typeof Cart.clear==='function')Cart.clear();
+      else localStorage.removeItem('act31_cart_v1');
+    }catch(_){
+      try{localStorage.removeItem('act31_cart_v1')}catch(__){}
+    }
+
+    try{sessionStorage.removeItem('31action_pending_stripe_checkout')}catch(_){
+    }
+
+    show('success');
+  }
+
+  async function loadConfirmation(attempt=0){
+    if(!sessionId){
+      errorMsg.textContent='This confirmation link is missing its Stripe checkout session.';
+      show('error');
+      return;
+    }
+
+    show('loading');
+
+    try{
+      const data=await ActionAPI.request(
+        `/api/checkout/confirmation/${encodeURIComponent(sessionId)}`
+      );
+
+      if(data?.ready && data?.order){
+        renderOrder(data.order);
+        return;
+      }
+
+      if(data?.ready===false && attempt<6){
+        setTimeout(()=>loadConfirmation(attempt+1),1200);
+        return;
+      }
+
+      errorMsg.textContent=data?.message||
+        'Your payment was received, but the order record is still being finalized. Please check again.';
+      show('error');
+
+    }catch(err){
+      if(attempt<3){
+        setTimeout(()=>loadConfirmation(attempt+1),1200);
+        return;
+      }
+      errorMsg.textContent=String(err?.message||err||
+        'We could not load the order confirmation.');
+      show('error');
+    }
+  }
+
+  retry.onclick=()=>loadConfirmation(0);
+  loadConfirmation();
+})();
+</script>
+</body>
+</html>
